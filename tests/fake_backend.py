@@ -42,7 +42,12 @@ class FakeBackend(Backend):
         self.calls.append(("place", window.id, workspace, rect, anchor, resize))
         if not resize:
             current = self._windows[window.id].rect
-            rect = Rect(rect.x, rect.y, current.width, current.height)
+            x, y = rect.x, rect.y
+            if anchor == "top-right":
+                x = rect.right - current.width
+            elif anchor == "bottom-left":
+                y = rect.bottom - current.height
+            rect = Rect(x, y, current.width, current.height)
         self._replace(window, workspace=workspace, rect=rect)
 
     def raise_window(self, window):

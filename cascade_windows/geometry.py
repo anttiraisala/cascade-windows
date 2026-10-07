@@ -14,6 +14,7 @@ from .settings import Settings
 
 ANCHOR_TOP_LEFT = "top-left"
 ANCHOR_BOTTOM_LEFT = "bottom-left"
+ANCHOR_TOP_RIGHT = "top-right"  # windows that keep their own size: top-right corner at the slot
 
 
 @dataclass(frozen=True)

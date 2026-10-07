@@ -37,9 +37,16 @@ class SelectionTest(unittest.TestCase):
         result = plan([make_window(1), make_window(2, minimized=True)])
         self.assertEqual(moved_ids(result), [1])
 
-    def test_dialogs_and_special_windows_stay_where_they_are(self):
-        result = plan([make_window(1), make_window(2, kind=KIND_DIALOG),
-                       make_window(3, kind=KIND_OTHER)])
+    def test_special_windows_stay_where_they_are(self):
+        result = plan([make_window(1), make_window(3, kind=KIND_OTHER)])
+        self.assertEqual(moved_ids(result), [1])
+
+    def test_dialogs_are_cascaded_by_default(self):
+        result = plan([make_window(1), make_window(2, kind=KIND_DIALOG)])
+        self.assertEqual(moved_ids(result), [1, 2])
+
+    def test_dialogs_can_be_left_alone(self):
+        result = plan([make_window(1), make_window(2, kind=KIND_DIALOG)], Settings(skip_dialogs=True))
         self.assertEqual(moved_ids(result), [1])
 
     def test_fullscreen_and_sticky_windows_are_skipped_by_default(self):
@@ -81,8 +88,8 @@ class ScopeTest(unittest.TestCase):
         result = plan(self.windows, scope=SCOPE_WORKSPACE)
         by_id = {move.window.id: move.rect for move in result.moves}
         # Both are single windows, so each fills the usable area of its own monitor.
-        self.assertEqual(by_id[1], Rect(20, 50, 1880, 1010))   # 30 px panel + 20 px margin
-        self.assertEqual(by_id[2], Rect(1940, 20, 1880, 1040))
+        self.assertEqual(by_id[1], Rect(80, 70, 1780, 990))   # 30 px panel + 40 px top margin
+        self.assertEqual(by_id[2], Rect(2000, 40, 1780, 1020))
 
     def test_unknown_scope_is_rejected(self):
         with self.assertRaises(ValueError):
@@ -134,12 +141,24 @@ class ApplyTest(unittest.TestCase):
         backend = FakeBackend([LEFT], [window])
         apply_plan(backend, plan_for_backend(backend, Settings(), SCOPE_WORKSPACE), Settings())
         self.assertEqual((backend.window(1).rect.width, backend.window(1).rect.height), (400, 300))
-        self.assertEqual((backend.window(1).rect.x, backend.window(1).rect.y), (20, 50))
+        self.assertEqual((backend.window(1).rect.right, backend.window(1).rect.y), (1860, 70))  # top-right corner at the slot
 
-    def test_dialogs_are_never_touched(self):
-        dialog = make_window(2, kind=KIND_DIALOG)
+    def test_dialogs_keep_their_size_and_get_the_top_right_corner_of_their_slot(self):
+        dialog = make_window(2, kind=KIND_DIALOG, rect=Rect(300, 300, 350, 200))
         backend = FakeBackend([LEFT], [make_window(1), dialog])
         apply_plan(backend, plan_for_backend(backend, Settings(), SCOPE_WORKSPACE), Settings())
+        result = backend.window(2).rect
+        self.assertEqual((result.width, result.height), (350, 200))
+        # The dialog is the front window of two: its slot reaches the right margin, one step below the top.
+        self.assertEqual((result.right, result.y), (1860, 70 + 40))
+        place = [call for call in backend.calls if call[0] == "place" and call[1] == 2][0]
+        self.assertFalse(place[5])  # resize=False
+
+    def test_skipped_dialogs_are_never_touched(self):
+        dialog = make_window(2, kind=KIND_DIALOG)
+        backend = FakeBackend([LEFT], [make_window(1), dialog])
+        settings = Settings(skip_dialogs=True)
+        apply_plan(backend, plan_for_backend(backend, settings, SCOPE_WORKSPACE), settings)
         self.assertEqual(backend.window(2).rect, dialog.rect)
         self.assertNotIn(2, [call[1] for call in backend.calls if call[0] in ("place", "raise")])
 

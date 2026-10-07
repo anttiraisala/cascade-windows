@@ -34,10 +34,10 @@ class NemoMenuTest(unittest.TestCase):
     def test_every_listed_action_file_exists_in_the_repository(self):
         for item in nemo_menu.SUBMENU_ITEMS:
             if item is not None:
-                self.assertTrue(os.path.exists(os.path.join(REPO, "nemo", item[0])), item[0])
+                self.assertTrue(os.path.exists(os.path.join(REPO, "nemo", item)), item)
 
     def test_every_action_file_in_the_repository_is_in_the_submenu(self):
-        listed = {item[0] for item in nemo_menu.SUBMENU_ITEMS if item}
+        listed = {item for item in nemo_menu.SUBMENU_ITEMS if item}
         found = {n for n in os.listdir(os.path.join(REPO, "nemo")) if n.endswith(".nemo_action")}
         self.assertEqual(listed, found)
 
@@ -48,8 +48,35 @@ class NemoMenuTest(unittest.TestCase):
         self.assertEqual(submenu["user-label"], "Cascade Windows")
         kinds = [c["type"] for c in submenu["children"]]
         self.assertEqual(kinds, ["action", "action", "action", "separator", "action", "action"])
-        self.assertEqual(submenu["children"][0]["uuid"], "cascade-windows-cascade.nemo_action")
-        self.assertEqual(submenu["children"][0]["user-label"], "Monitor")
+        self.assertEqual(submenu["children"][0]["uuid"], "cascade-windows-1-cascade.nemo_action")
+        self.assertIsNone(submenu["children"][0]["user-label"])  # the Name= of the action file is shown
+
+    EXPECTED_ORDER = [
+        "Cascade Windows",
+        "Cascade Workspace",
+        "Cascade All Workspaces",
+        None,
+        "Undo Cascade",
+        "Cascade Settings...",
+    ]
+
+    def action_name(self, file_name):
+        with open(os.path.join(REPO, "nemo", file_name), encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("Name="):
+                    return line[len("Name="):].strip()
+        self.fail("no Name= line in " + file_name)
+
+    def test_submenu_shows_the_entries_in_the_requested_order(self):
+        nemo_menu.install(self.path)
+        children = sorted(ours(read(self.path))[0]["children"], key=lambda c: c["position"])
+        shown = [None if c["type"] == "separator" else self.action_name(c["uuid"]) for c in children]
+        self.assertEqual(shown, self.EXPECTED_ORDER)
+
+    def test_flat_menu_without_the_layout_file_has_the_same_order(self):
+        # Nemo sorts unlisted actions by file name; the numbers in the names keep the order.
+        files = sorted(n for n in os.listdir(os.path.join(REPO, "nemo")) if n.endswith(".nemo_action"))
+        self.assertEqual([self.action_name(n) for n in files], [e for e in self.EXPECTED_ORDER if e])
 
     def test_other_entries_and_fields_are_preserved(self):
         os.makedirs(os.path.dirname(self.path))

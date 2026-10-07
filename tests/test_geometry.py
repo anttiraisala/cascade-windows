@@ -14,8 +14,8 @@ WORKAREA = Rect(0, 0, 1920, 1080)
 
 
 class UsableAreaTest(unittest.TestCase):
-    def test_default_margin_is_twenty_pixels_on_every_side(self):
-        self.assertEqual(usable_area(WORKAREA, Settings()), Rect(20, 20, 1880, 1040))
+    def test_default_margins_are_40_60_20_80(self):
+        self.assertEqual(usable_area(WORKAREA, Settings()), Rect(80, 40, 1780, 1020))
 
     def test_margins_are_independent(self):
         settings = Settings(margin_top=10, margin_right=30, margin_bottom=50, margin_left=70)
@@ -52,9 +52,9 @@ class AnchoredTest(unittest.TestCase):
 
     def test_exact_numbers_for_three_windows(self):
         placements = plan_layout(3, self.area, self.settings)
-        self.assertEqual(placements[0].rect, Rect(20, 20, 1640, 1040))
-        self.assertEqual(placements[1].rect, Rect(20, 60, 1760, 1000))
-        self.assertEqual(placements[2].rect, Rect(20, 100, 1880, 960))
+        self.assertEqual(placements[0].rect, Rect(80, 40, 1540, 1020))
+        self.assertEqual(placements[1].rect, Rect(80, 80, 1660, 980))
+        self.assertEqual(placements[2].rect, Rect(80, 120, 1780, 940))
 
     def test_steps_are_independent(self):
         settings = Settings(step_x=10, step_y=40)
@@ -116,7 +116,7 @@ class FitPercentFixedTest(unittest.TestCase):
         area = usable_area(WORKAREA, settings)
         placements = plan_layout(3, area, settings)
         sizes = {(p.rect.width, p.rect.height) for p in placements}
-        self.assertEqual(sizes, {(1880 - 240, 1040 - 80)})
+        self.assertEqual(sizes, {(1780 - 240, 1020 - 80)})
         self.assertEqual(placements[0].rect.x, area.x)
         self.assertEqual(placements[0].rect.y, area.y)
         self.assertEqual(placements[-1].rect.right, area.right)
@@ -127,7 +127,7 @@ class FitPercentFixedTest(unittest.TestCase):
         settings = Settings(size_mode="percent", percent_width=50, percent_height=50)
         area = usable_area(WORKAREA, settings)
         placements = plan_layout(2, area, settings)
-        self.assertEqual((placements[0].rect.width, placements[0].rect.height), (940, 520))
+        self.assertEqual((placements[0].rect.width, placements[0].rect.height), (890, 510))
         self.assertEqual(placements[1].rect.x - placements[0].rect.x, 120)
 
     def test_fixed_size_is_limited_to_the_area(self):

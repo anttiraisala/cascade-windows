@@ -19,10 +19,10 @@ class SettingsError(ValueError):
 
 @dataclass
 class Settings:
-    margin_top: int = 20
-    margin_right: int = 20
+    margin_top: int = 40
+    margin_right: int = 60
     margin_bottom: int = 20
-    margin_left: int = 20
+    margin_left: int = 80
     step_x: int = 120
     step_y: int = 40
     size_mode: str = "anchored"
@@ -38,6 +38,7 @@ class Settings:
     skip_minimized: bool = True
     skip_fullscreen: bool = True
     skip_sticky: bool = True
+    skip_dialogs: bool = False
     restore_maximized: bool = True
     workarea_dock_windows: bool = True
 
@@ -64,6 +65,7 @@ _BOOL_KEYS: Dict[Tuple[str, ...], str] = {
     ("skip", "minimized"): "skip_minimized",
     ("skip", "fullscreen"): "skip_fullscreen",
     ("skip", "sticky"): "skip_sticky",
+    ("skip", "dialogs"): "skip_dialogs",
     ("restore_maximized",): "restore_maximized",
     ("workarea", "dock_windows"): "workarea_dock_windows",
 }
@@ -210,7 +212,10 @@ _COMMENTS = {
         "of the cascade, moved 'offset' pixels right and down. enabled=false: squeeze the steps "
         "instead, so everything stays in one cascade."
     ),
-    ("skip",): "Windows that are left completely alone when true.",
+    ("skip",): (
+        "Windows that are left completely alone when true. dialogs=false: dialog windows are cascaded "
+        "too; they keep their own size and their top-right corner goes to the cascade position."
+    ),
     ("workarea",): (
         "How the free area of each monitor is found. dock_windows=true: panels and launchers that do "
         "not reserve screen space in the standard way (for example the Unity 7 launcher and top "
@@ -257,18 +262,37 @@ def documented_default_dict() -> dict:
     return documented
 
 
-def _legacy_default_dict() -> dict:
-    """The defaults that version 0.1.0 wrote to the configuration file (steps were 30 and 30)."""
-    legacy = default_settings_dict()
-    legacy["step"] = {"x": 30, "y": 30}
-    return legacy
+def _strip_comments(value):
+    if isinstance(value, dict):
+        return {
+            key: _strip_comments(item)
+            for key, item in value.items()
+            if not (str(key) == COMMENT_KEY or str(key).startswith(COMMENT_KEY + "_"))
+        }
+    return value
+
+
+def _legacy_default_dicts() -> list:
+    """Complete files that earlier versions generated, so that they can be recognised.
+
+    Version 0.1.0 wrote steps of 30 and 30; later versions wrote steps of 120 and 40. Both used a
+    margin of 20 on every side.
+    """
+    variants = []
+    for step in ({"x": 30, "y": 30}, {"x": 120, "y": 40}):
+        legacy = default_settings_dict()
+        legacy["margin"] = {"top": 20, "right": 20, "bottom": 20, "left": 20}
+        legacy["step"] = dict(step)
+        del legacy["skip"]["dialogs"]
+        variants.append(legacy)
+    return variants
 
 
 def remove_legacy_default_config(path: Optional[str] = None) -> bool:
-    """Delete a configuration file that is an untouched copy of the old defaults.
+    """Delete a configuration file that is an untouched copy of defaults of an earlier version.
 
     Such a file only freezes outdated defaults. Files the user has changed are never touched.
-    Returns True when a file was removed.
+    Comment keys are ignored in the comparison. Returns True when a file was removed.
     """
     path = path or config_path()
     try:
@@ -276,7 +300,13 @@ def remove_legacy_default_config(path: Optional[str] = None) -> bool:
             data = json.load(handle)
     except (OSError, ValueError):
         return False
-    if data != _legacy_default_dict():
+    if not isinstance(data, dict):
+        return False
+    data = _strip_comments(data)
+    data.setdefault("workarea", {"dock_windows": True})  # files from before this section existed
+    if isinstance(data.get("skip"), dict) and data["skip"].get("dialogs") is False:
+        del data["skip"]["dialogs"]  # files from before this setting existed
+    if data not in _legacy_default_dicts():
         return False
     os.remove(path)
     return True

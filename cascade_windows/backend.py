@@ -54,7 +54,7 @@ class Backend:
         """Move (and, when ``resize``, resize) the window so its visible rectangle is ``rect``.
 
         When the window manager forces a different size, the corner named by ``anchor``
-        ("top-left" or "bottom-left") of ``rect`` must stay where it is.
+        ("top-left", "bottom-left" or "top-right") of ``rect`` must stay where it is.
         """
         raise NotImplementedError
 

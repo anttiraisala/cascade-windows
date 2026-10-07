@@ -20,14 +20,16 @@ from cascade_windows.settings import (
 class SettingsTest(unittest.TestCase):
     def test_defaults_match_the_documented_values(self):
         settings = Settings()
-        self.assertEqual(settings.margin_left, 20)
+        self.assertEqual(settings.margin_left, 80)
+        self.assertEqual((settings.margin_top, settings.margin_right, settings.margin_bottom), (40, 60, 20))
+        self.assertFalse(settings.skip_dialogs)
         self.assertEqual(settings.size_mode, "anchored")
         self.assertTrue(settings.wrap_enabled)
 
     def test_partial_configuration_keeps_other_defaults(self):
         settings = settings_from_dict({"margin": {"top": 5}, "step": {"x": 11}})
         self.assertEqual(settings.margin_top, 5)
-        self.assertEqual(settings.margin_left, 20)
+        self.assertEqual(settings.margin_left, 80)
         self.assertEqual(settings.step_x, 11)
         self.assertEqual(settings.step_y, 40)
 
@@ -147,7 +149,9 @@ class LegacyConfigTest(unittest.TestCase):
 
     def legacy(self):
         data = default_settings_dict()
+        data["margin"] = {"top": 20, "right": 20, "bottom": 20, "left": 20}
         data["step"] = {"x": 30, "y": 30}
+        del data["skip"]["dialogs"]
         return data
 
     def test_untouched_legacy_file_is_removed(self):

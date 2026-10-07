@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple
 
 from .backend import Backend, BackendError
-from .geometry import ANCHOR_BOTTOM_LEFT, ANCHOR_TOP_LEFT
+from .geometry import ANCHOR_BOTTOM_LEFT, ANCHOR_TOP_LEFT, ANCHOR_TOP_RIGHT
 from .model import KIND_DIALOG, KIND_NORMAL, KIND_OTHER, Monitor, Rect, WindowInfo
 
 try:
@@ -697,7 +697,7 @@ class X11Backend(Backend):
             # whole character rows). Keep its top edge where the cascade wants it, so the
             # staircase of title bars stays regular, and let the bottom edge fall short.
             anchor = ANCHOR_TOP_LEFT
-        visible_x = rect.x
+        visible_x = rect.right - visible_width if anchor == ANCHOR_TOP_RIGHT else rect.x
         visible_y = rect.bottom - visible_height if anchor == ANCHOR_BOTTOM_LEFT else rect.y
         vx, vy = self._viewport_origin()
         frame_x = col * self.screen_width + visible_x - gtk.left - vx
@@ -751,6 +751,8 @@ class X11Backend(Backend):
                     continue
                 vx, vy = self._viewport_origin()
                 target_x = item.col * self.screen_width + item.rect.x
+                if item.anchor == ANCHOR_TOP_RIGHT:
+                    target_x = item.col * self.screen_width + item.rect.right - actual.width
                 if item.anchor == ANCHOR_BOTTOM_LEFT:
                     target_y = item.row * self.screen_height + item.rect.bottom - actual.height
                 else:

@@ -167,7 +167,7 @@ class X11BackendTest(XvfbTestCase):
     def test_cascades_three_windows_exactly(self):
         windows = [self.create_client(100 + 40 * i, 100, 400, 300, "w%d" % i) for i in range(3)]
         self.cascade()
-        expected = [Rect(20, 20, 1640, 1040), Rect(20, 60, 1760, 1000), Rect(20, 100, 1880, 960)]
+        expected = [Rect(80, 40, 1540, 1020), Rect(80, 80, 1660, 980), Rect(80, 120, 1780, 940)]
         for window, rect in zip(windows, expected):
             self.assertEqual(self.visible(window), rect)
 
@@ -185,7 +185,11 @@ class X11BackendTest(XvfbTestCase):
         before_dialog = self.visible(dialog)
         before_hidden = self.visible(hidden)
         self.cascade()
-        self.assertEqual(self.visible(dialog), before_dialog)
+        moved_dialog = self.visible(dialog)
+        self.assertEqual((moved_dialog.width, moved_dialog.height), (before_dialog.width, before_dialog.height))
+        self.assertNotEqual(moved_dialog, before_dialog)  # dialogs are cascaded too, at their own size
+        self.assertGreaterEqual(moved_dialog.y, 40)
+        self.assertLessEqual(moved_dialog.right, 1860)
         self.assertEqual(self.visible(hidden), before_hidden)
         self.assertEqual(self.visible(fixed).width, 324)  # size untouched (client + decorations)
         self.assertEqual(self.visible(fixed).height, 262)
@@ -199,7 +203,7 @@ class X11BackendTest(XvfbTestCase):
         self.backend.sync()
         self.wait_until(lambda: self.visible(window).width >= 1900)
         self.cascade()
-        self.assertEqual(self.visible(window), Rect(20, 20, 1880, 1040))
+        self.assertEqual(self.visible(window), Rect(80, 40, 1780, 1020))
 
     def test_undo_restores_the_original_position(self):
         from cascade_windows.cascade import restore_positions
@@ -226,7 +230,7 @@ class X11BackendTest(XvfbTestCase):
         ]
         self.cascade()
         tops = [self.visible(window).y for window in windows]
-        self.assertEqual(tops, [20, 60, 100, 140])
+        self.assertEqual(tops, [40, 80, 120, 160])
         for window in (windows[1], windows[3]):
             rect = self.visible(window)
             self.assertLessEqual(rect.bottom, 1060)
@@ -237,9 +241,9 @@ class X11BackendTest(XvfbTestCase):
         self.cascade(settings=Settings(size_mode="fit"))
         for window in windows:
             rect = self.visible(window)
-            self.assertGreaterEqual(rect.x, 20)
-            self.assertGreaterEqual(rect.y, 20)
-            self.assertLessEqual(rect.right, 1900)
+            self.assertGreaterEqual(rect.x, 80)
+            self.assertGreaterEqual(rect.y, 40)
+            self.assertLessEqual(rect.right, 1860)
             self.assertLessEqual(rect.bottom, 1060)
 
 
@@ -259,8 +263,8 @@ class ViewportBackendTest(XvfbTestCase):
         self.assertEqual(infos[here.id].workspace, "0:1,0")
         self.assertEqual(infos[there.id].workspace, "0:0,0")
         self.cascade(scope=SCOPE_ALL)
-        self.assertEqual(self.visible(here), Rect(1920 + 20, 20, 1880, 1040))
-        self.assertEqual(self.visible(there), Rect(20, 20, 1880, 1040))
+        self.assertEqual(self.visible(here), Rect(1920 + 80, 40, 1780, 1020))
+        self.assertEqual(self.visible(there), Rect(80, 40, 1780, 1020))
 
     def test_workspace_scope_leaves_other_viewports_alone(self):
         self.create_client(100, 100, 400, 300, "here")
@@ -324,8 +328,8 @@ class DockWindowTest(XvfbTestCase):
         left = self.create_client(200, 200, 400, 300, "left")
         right = self.create_client(1200, 200, 400, 300, "right")
         self.cascade()
-        self.assertEqual(self.visible(left), Rect(84, 44, 856, 1016))     # 64 + 20, 24 + 20
-        self.assertEqual(self.visible(right), Rect(980, 44, 920, 1016))   # right monitor: no launcher
+        self.assertEqual(self.visible(left), Rect(144, 64, 756, 996))     # launcher 64 + left 80, panel 24 + top 40
+        self.assertEqual(self.visible(right), Rect(1040, 64, 820, 996))   # right monitor: no launcher
 
     def test_bars_are_ignored_when_the_setting_is_off(self):
         self.backend.use_dock_windows = False

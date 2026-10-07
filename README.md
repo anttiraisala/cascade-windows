@@ -11,9 +11,9 @@ Planned: GNOME Shell extension for Ubuntu 24.04 on Wayland (see `docs/PLAN.md`).
 
 - Cascade the monitor under the mouse, the whole current workspace, or all workspaces. Always per monitor.
 - Several size modes: `anchored` (default), `fit`, `percent`, `fixed`.
-- Configurable margin around the monitor edge (default 20 px) and configurable X and Y steps.
+- Configurable margin around the monitor edge (defaults: 40 px top, 60 px right, 20 px bottom, 80 px left) and configurable X and Y steps.
 - Wraps to a new round when there are too many windows.
-- Minimized windows are skipped, dialogs stay where they are, maximized windows are restored first.
+- Minimized windows are skipped, dialogs and fixed-size windows are moved but keep their size (top-right corner at the cascade position), maximized windows are restored first.
 - Undo.
 - One JSON configuration file. See `docs/CONFIGURATION.md`.
 

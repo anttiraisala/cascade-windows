@@ -25,7 +25,7 @@ class ShowConfigTest(unittest.TestCase):
         self.assertIn(path, output)
         data = json.loads(output[output.index("{"):])
         self.assertEqual(data["step"], {"x": 77, "y": 5})
-        self.assertEqual(data["margin"]["left"], 20)
+        self.assertEqual(data["margin"]["left"], 80)
 
     def test_show_config_without_a_file_reports_the_defaults(self):
         code, output = self.run_main("--config", "/nonexistent/config.json", "--show-config")

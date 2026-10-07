@@ -49,15 +49,17 @@ the shortcut both call.
 ### Which windows are touched
 
 - Minimized windows are skipped.
-- Dialogs (window type dialog, or transient windows) stay exactly where they are.
+- Dialogs (window type dialog, or transient windows) are cascaded too, but keep their own size: their top-right
+  corner goes to the top-right corner of their cascade position. `skip.dialogs` leaves them alone instead.
 - Maximized windows are restored to normal size first.
 - Fullscreen windows, "on all workspaces" windows, docks, panels and desktop widgets are skipped.
-- Windows that cannot be resized are moved but keep their size.
+- Windows that cannot be resized are moved but keep their size; their top-right corner goes to the top-right
+  corner of their cascade position.
 
 ### Area and margin
 
 The window manager work area is used, so panels and launchers are respected. An additional empty
-margin (default 20 px, configurable per side) is kept between the monitor edges and the windows.
+margin (defaults: top 40, right 60, bottom 20, left 80 px; configurable per side) is kept between the monitor edges and the windows.
 
 ### Size modes
 

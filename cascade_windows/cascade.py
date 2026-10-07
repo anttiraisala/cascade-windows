@@ -7,8 +7,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from .backend import Backend
-from .geometry import ANCHOR_TOP_LEFT, plan_layout, usable_area
-from .model import KIND_NORMAL, Monitor, Rect, WindowInfo
+from .geometry import ANCHOR_TOP_LEFT, ANCHOR_TOP_RIGHT, plan_layout, usable_area
+from .model import KIND_DIALOG, KIND_NORMAL, Monitor, Rect, WindowInfo
 from .regions import Region, regions_for_monitor
 from .settings import Settings
 
@@ -26,6 +26,7 @@ class Move:
     workspace: str
     rect: Rect
     anchor: str
+    resize: bool = True  # False: the window keeps its own size
 
 
 @dataclass
@@ -57,8 +58,11 @@ class Plan:
 
 
 def is_eligible(window: WindowInfo, settings: Settings) -> bool:
-    """Only normal windows are cascaded; dialogs and special windows stay where they are."""
-    if window.kind != KIND_NORMAL:
+    """Normal windows and (unless skipped) dialogs are cascaded; special windows stay where they are."""
+    if window.kind == KIND_DIALOG:
+        if settings.skip_dialogs:
+            return False
+    elif window.kind != KIND_NORMAL:
         return False
     if window.minimized and settings.skip_minimized:
         return False
@@ -142,7 +146,12 @@ def build_plan(
         placements = plan_layout(len(ordered), area, settings)
         plan.groups.append(GroupSummary(workspace, monitor.name, region.index, area, len(ordered)))
         for window, placement in zip(ordered, placements):
-            plan.moves.append(Move(window, workspace, placement.rect, placement.anchor))
+            if window.kind == KIND_DIALOG or not window.resizable:
+                # Dialogs and fixed-size windows keep their size; their top-right corner goes to the
+                # top-right corner of the cascade position.
+                plan.moves.append(Move(window, workspace, placement.rect, ANCHOR_TOP_RIGHT, False))
+            else:
+                plan.moves.append(Move(window, workspace, placement.rect, placement.anchor))
     return plan
 
 
@@ -156,7 +165,7 @@ def apply_plan(backend: Backend, plan: Plan, settings: Settings) -> None:
     if unmaximized:
         backend.sync()
     for move in plan.moves:
-        backend.place(move.window, move.workspace, move.rect, move.anchor, move.window.resizable)
+        backend.place(move.window, move.workspace, move.rect, move.anchor, move.resize)
     backend.sync()
     for move in plan.moves:  # back to front, so the last window of a group ends up on top
         backend.raise_window(move.window)

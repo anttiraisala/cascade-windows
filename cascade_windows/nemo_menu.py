@@ -14,14 +14,17 @@ from typing import List, Optional
 
 SUBMENU_LABEL = "Cascade Windows"  # also the submenu's identifier in the layout file
 
-# (action file name, label inside the submenu). None marks a separator.
+# Action files in menu order, None marks a separator. The numbers in the file names make Nemo's own
+# alphabetical order (used when the layout file cannot be applied) the same as this order. The menu
+# labels are the Name= lines of the action files: Cascade Windows, Cascade Workspace,
+# Cascade All Workspaces, Undo Cascade, Cascade Settings...
 SUBMENU_ITEMS = [
-    ("cascade-windows-cascade.nemo_action", "Monitor"),
-    ("cascade-windows-workspace.nemo_action", "Workspace"),
-    ("cascade-windows-all.nemo_action", "All Workspaces"),
+    "cascade-windows-1-cascade.nemo_action",
+    "cascade-windows-2-workspace.nemo_action",
+    "cascade-windows-3-all.nemo_action",
     None,
-    ("cascade-windows-undo.nemo_action", "Undo"),
-    ("cascade-windows-settings.nemo_action", "Settings..."),
+    "cascade-windows-4-undo.nemo_action",
+    "cascade-windows-5-settings.nemo_action",
 ]
 
 
@@ -44,13 +47,12 @@ def build_submenu() -> dict:
         if item is None:
             children.append({"uuid": "separator", "type": "separator", "position": position})
             continue
-        file_name, label = item
         children.append(
             {
-                "uuid": file_name,
+                "uuid": item,
                 "type": "action",
                 "position": position,
-                "user-label": label,
+                "user-label": None,  # None: show the Name= of the action file
                 "user-icon": None,
             }
         )

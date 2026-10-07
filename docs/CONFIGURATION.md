@@ -15,7 +15,7 @@ Unknown keys are ignored with a warning. Invalid values make the command stop wi
 
 ```json
 {
-  "margin": { "top": 20, "right": 20, "bottom": 20, "left": 20 },
+  "margin": { "top": 40, "right": 60, "bottom": 20, "left": 80 },
   "step": { "x": 120, "y": 40 },
   "size_mode": "anchored",
   "percent": { "width": 70, "height": 70 },
@@ -23,7 +23,7 @@ Unknown keys are ignored with a warning. Invalid values make the command stop wi
   "min_size": { "width": 300, "height": 200 },
   "order": "stacking",
   "wrap": { "enabled": true, "offset": 12 },
-  "skip": { "minimized": true, "fullscreen": true, "sticky": true },
+  "skip": { "minimized": true, "fullscreen": true, "sticky": true, "dialogs": false },
   "restore_maximized": true,
   "workarea": { "dock_windows": true }
 }
@@ -43,10 +43,11 @@ Unknown keys are ignored with a warning. Invalid values make the command stop wi
 | `skip.minimized` | Do not touch minimized windows. |
 | `skip.fullscreen` | Do not touch fullscreen windows. |
 | `skip.sticky` | Do not touch windows that are shown on all workspaces. |
+| `skip.dialogs` | Do not touch dialog windows. When `false` (the default) dialogs are cascaded too: they keep their own size and their top-right corner goes to the top-right corner of their cascade position. |
 | `workarea.dock_windows` | Treat panels and launchers that do not reserve screen space in the standard way (for example the Unity 7 launcher and top panel) as obstacles, using their position and size. Turn off if an overlay is wrongly taken for a panel. |
 | `restore_maximized` | Restore maximized windows to normal size before cascading. When `false` they are left alone. |
 
-Dialogs and other non-normal windows are never moved.
+Windows of other special types (docks, panels, desktop widgets, splash screens) are never moved.
 
 Windows that resize in steps (for example terminals, which snap to whole character rows) may end up a few
 pixels smaller than planned. In `anchored` mode their top edge stays where the cascade wants it, and the
