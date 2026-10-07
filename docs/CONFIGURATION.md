@@ -7,6 +7,10 @@ defaults) and open it in your editor, and `cascade-windows --show-config` to see
 settings that are actually in effect. Note that a file written by an old version keeps its old values,
 because the file always wins over the built-in defaults; delete it, or the keys you do not want to pin,
 to get the current defaults.
+JSON has no comments, so explanations are ordinary keys named `comment` (one per section) or
+`comment_<setting>` (above a single setting, for example `comment_size_mode`). The program ignores them at
+every level, so you can edit or delete them freely. `--edit-config` writes a new file with all of them; a
+file you created earlier keeps what it has.
 Unknown keys are ignored with a warning. Invalid values make the command stop with a clear message.
 
 ```json
@@ -41,3 +45,7 @@ Unknown keys are ignored with a warning. Invalid values make the command stop wi
 | `restore_maximized` | Restore maximized windows to normal size before cascading. When `false` they are left alone. |
 
 Dialogs and other non-normal windows are never moved.
+
+Windows that resize in steps (for example terminals, which snap to whole character rows) may end up a few
+pixels smaller than planned. In `anchored` mode their top edge stays where the cascade wants it, and the
+bottom edge falls short by less than one row.

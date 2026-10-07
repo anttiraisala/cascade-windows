@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Set, Tuple
 
 from .backend import Backend, BackendError
-from .geometry import ANCHOR_BOTTOM_LEFT
+from .geometry import ANCHOR_BOTTOM_LEFT, ANCHOR_TOP_LEFT
 from .model import KIND_DIALOG, KIND_NORMAL, KIND_OTHER, Monitor, Rect, WindowInfo
 
 try:
@@ -601,6 +601,11 @@ class X11Backend(Backend):
             size = None
         visible_width = client_width + net.left + net.right - gtk.left - gtk.right
         visible_height = client_height + net.top + net.bottom - gtk.top - gtk.bottom
+        if resize and visible_height != rect.height:
+            # The window could not get the requested height (for example a terminal that snaps to
+            # whole character rows). Keep its top edge where the cascade wants it, so the
+            # staircase of title bars stays regular, and let the bottom edge fall short.
+            anchor = ANCHOR_TOP_LEFT
         visible_x = rect.x
         visible_y = rect.bottom - visible_height if anchor == ANCHOR_BOTTOM_LEFT else rect.y
         vx, vy = self._viewport_origin()

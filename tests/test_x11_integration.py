@@ -91,7 +91,7 @@ class XvfbTestCase(unittest.TestCase):
         _remove_display_files(int(self.display_name[1:]))
 
     def create_client(self, x, y, width, height, title, fixed_size=False, dialog=False,
-                      minimized=False):
+                      minimized=False, increments=None):
         window = self.root.create_window(
             x, y, width, height, 0, self.client.screen().root_depth, X.InputOutput, X.CopyFromParent
         )
@@ -101,6 +101,11 @@ class XvfbTestCase(unittest.TestCase):
             window.set_wm_normal_hints(
                 flags=(1 << 4) | (1 << 5), min_width=width, min_height=height,
                 max_width=width, max_height=height,
+            )
+        if increments:
+            window.set_wm_normal_hints(
+                flags=(1 << 6) | (1 << 8), width_inc=increments[0], height_inc=increments[1],
+                base_width=0, base_height=0,
             )
         if dialog:
             window.change_property(
@@ -209,6 +214,22 @@ class X11BackendTest(XvfbTestCase):
         self.assertNotEqual(self.visible(window), original)
         restore_positions(self.backend, entries)
         self.assertEqual(self.visible(window), original)
+
+    def test_windows_that_snap_to_a_grid_keep_a_regular_staircase(self):
+        """Terminals resize in whole character cells. Their top edges must still line up."""
+        windows = [
+            self.create_client(100, 100, 400, 300, "plain 0"),
+            self.create_client(100, 100, 400, 300, "terminal", increments=(9, 17)),
+            self.create_client(100, 100, 400, 300, "plain 2"),
+            self.create_client(100, 100, 400, 300, "terminal 2", increments=(9, 17)),
+        ]
+        self.cascade()
+        tops = [self.visible(window).y for window in windows]
+        self.assertEqual(tops, [20, 60, 100, 140])
+        for window in (windows[1], windows[3]):
+            rect = self.visible(window)
+            self.assertLessEqual(rect.bottom, 1060)
+            self.assertGreater(rect.bottom, 1060 - 17 - 5)  # at most one row short
 
     def test_fit_mode_places_every_window_inside_the_margins(self):
         windows = [self.create_client(100, 100, 400, 300, "w%d" % i) for i in range(5)]

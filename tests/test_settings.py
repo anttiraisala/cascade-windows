@@ -6,7 +6,9 @@ import unittest
 from cascade_windows.settings import (
     Settings,
     SettingsError,
+    COMMENT_KEY,
     default_settings_dict,
+    documented_default_dict,
     remove_legacy_default_config,
     load_settings,
     settings_from_dict,
@@ -70,7 +72,7 @@ class SettingsTest(unittest.TestCase):
             path = os.path.join(folder, "sub", "config.json")
             write_default_config(path)
             with open(path) as handle:
-                self.assertEqual(json.load(handle), default_settings_dict())
+                self.assertEqual(json.load(handle), documented_default_dict())
             self.assertEqual(load_settings(path), Settings())
 
     def test_existing_config_is_not_overwritten_by_default(self):
@@ -80,6 +82,60 @@ class SettingsTest(unittest.TestCase):
                 handle.write('{"step": {"x": 1}}')
             write_default_config(path)
             self.assertEqual(load_settings(path).step_x, 1)
+
+
+def strip_comments(value):
+    if isinstance(value, dict):
+        return {
+            k: strip_comments(v)
+            for k, v in value.items()
+            if not (k == COMMENT_KEY or k.startswith(COMMENT_KEY + "_"))
+        }
+    return value
+
+
+class CommentTest(unittest.TestCase):
+    def test_comment_keys_are_ignored_without_warnings_at_any_level(self):
+        warnings = []
+        data = {
+            "comment": "top",
+            "comment_size_mode": "about the mode",
+            "step": {"comment": "nested", "x": 9},
+        }
+        settings = settings_from_dict(data, warnings.append)
+        self.assertEqual(warnings, [])
+        self.assertEqual(settings.step_x, 9)
+
+    def test_documented_defaults_equal_the_plain_defaults_without_comments(self):
+        self.assertEqual(strip_comments(documented_default_dict()), default_settings_dict())
+        self.assertEqual(settings_from_dict(documented_default_dict()), Settings())
+
+    def test_every_section_and_every_choice_setting_is_explained(self):
+        documented = documented_default_dict()
+        self.assertIn(COMMENT_KEY, documented)
+        for key, value in default_settings_dict().items():
+            if isinstance(value, dict):
+                self.assertIn(COMMENT_KEY, documented[key], key)
+                self.assertTrue(documented[key][COMMENT_KEY], key)
+            else:
+                self.assertIn(COMMENT_KEY + "_" + key, documented, key)
+
+    def test_the_size_mode_comment_names_every_mode(self):
+        text = documented_default_dict()["comment_size_mode"]
+        for mode in ("anchored", "fit", "percent", "fixed"):
+            self.assertIn("'%s'" % mode, text)
+
+    def test_comments_are_plain_english_text(self):
+        def texts(value):
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    if key == COMMENT_KEY or key.startswith(COMMENT_KEY + "_"):
+                        yield item
+                    else:
+                        for found in texts(item):
+                            yield found
+        for text in texts(documented_default_dict()):
+            self.assertTrue(text.isascii(), text)
 
 
 class LegacyConfigTest(unittest.TestCase):
