@@ -8,7 +8,7 @@ Unknown keys are ignored with a warning. Invalid values make the command stop wi
 ```json
 {
   "margin": { "top": 20, "right": 20, "bottom": 20, "left": 20 },
-  "step": { "x": 30, "y": 30 },
+  "step": { "x": 120, "y": 40 },
   "size_mode": "anchored",
   "percent": { "width": 70, "height": 70 },
   "fixed": { "width": 900, "height": 600 },

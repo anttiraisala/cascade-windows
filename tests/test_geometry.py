@@ -52,9 +52,9 @@ class AnchoredTest(unittest.TestCase):
 
     def test_exact_numbers_for_three_windows(self):
         placements = plan_layout(3, self.area, self.settings)
-        self.assertEqual(placements[0].rect, Rect(20, 20, 1820, 1040))
-        self.assertEqual(placements[1].rect, Rect(20, 50, 1850, 1010))
-        self.assertEqual(placements[2].rect, Rect(20, 80, 1880, 980))
+        self.assertEqual(placements[0].rect, Rect(20, 20, 1640, 1040))
+        self.assertEqual(placements[1].rect, Rect(20, 60, 1760, 1000))
+        self.assertEqual(placements[2].rect, Rect(20, 100, 1880, 960))
 
     def test_steps_are_independent(self):
         settings = Settings(step_x=10, step_y=40)
@@ -116,7 +116,7 @@ class FitPercentFixedTest(unittest.TestCase):
         area = usable_area(WORKAREA, settings)
         placements = plan_layout(3, area, settings)
         sizes = {(p.rect.width, p.rect.height) for p in placements}
-        self.assertEqual(sizes, {(1880 - 60, 1040 - 60)})
+        self.assertEqual(sizes, {(1880 - 240, 1040 - 80)})
         self.assertEqual(placements[0].rect.x, area.x)
         self.assertEqual(placements[0].rect.y, area.y)
         self.assertEqual(placements[-1].rect.right, area.right)
@@ -128,7 +128,7 @@ class FitPercentFixedTest(unittest.TestCase):
         area = usable_area(WORKAREA, settings)
         placements = plan_layout(2, area, settings)
         self.assertEqual((placements[0].rect.width, placements[0].rect.height), (940, 520))
-        self.assertEqual(placements[1].rect.x - placements[0].rect.x, 30)
+        self.assertEqual(placements[1].rect.x - placements[0].rect.x, 120)
 
     def test_fixed_size_is_limited_to_the_area(self):
         settings = Settings(size_mode="fixed", fixed_width=5000, fixed_height=400)

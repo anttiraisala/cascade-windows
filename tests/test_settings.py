@@ -26,7 +26,7 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(settings.margin_top, 5)
         self.assertEqual(settings.margin_left, 20)
         self.assertEqual(settings.step_x, 11)
-        self.assertEqual(settings.step_y, 30)
+        self.assertEqual(settings.step_y, 40)
 
     def test_round_trip_through_the_dictionary_form(self):
         original = Settings(size_mode="fit", step_x=7, wrap_enabled=False, order="name")

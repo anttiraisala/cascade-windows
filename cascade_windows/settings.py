@@ -21,8 +21,8 @@ class Settings:
     margin_right: int = 20
     margin_bottom: int = 20
     margin_left: int = 20
-    step_x: int = 30
-    step_y: int = 30
+    step_x: int = 120
+    step_y: int = 40
     size_mode: str = "anchored"
     percent_width: int = 70
     percent_height: int = 70

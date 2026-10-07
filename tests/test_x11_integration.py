@@ -26,10 +26,31 @@ from cascade_windows.settings import Settings
 SCREEN = (1920, 1080)
 
 
+def _lock_is_stale(number):
+    """True when the lock file of display ``number`` belongs to a process that no longer exists."""
+    try:
+        with open("/tmp/.X%d-lock" % number) as handle:
+            pid = int(handle.read().strip())
+        os.kill(pid, 0)
+    except (OSError, ValueError):
+        return True
+    return False
+
+
+def _remove_display_files(number):
+    for path in ("/tmp/.X%d-lock" % number, "/tmp/.X11-unix/X%d" % number):
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
 def start_xvfb():
-    for number in range(90, 140):
-        if os.path.exists("/tmp/.X11-unix/X%d" % number) or os.path.exists("/tmp/.X%d-lock" % number):
-            continue
+    for number in range(90, 400):
+        if os.path.exists("/tmp/.X%d-lock" % number):
+            if not _lock_is_stale(number):
+                continue
+            _remove_display_files(number)
         process = subprocess.Popen(
             ["Xvfb", ":%d" % number, "-screen", "0", "%dx%dx24" % SCREEN, "-nolisten", "tcp"],
             stdout=subprocess.DEVNULL,
@@ -41,7 +62,9 @@ def start_xvfb():
             if process.poll() is not None:
                 break
             time.sleep(0.05)
-        process.kill()
+        process.terminate()
+        process.wait()
+        _remove_display_files(number)
     raise RuntimeError("Could not start Xvfb")
 
 
@@ -63,8 +86,9 @@ class XvfbTestCase(unittest.TestCase):
         self.addCleanup(self.backend.display.close)
 
     def _stop_xvfb(self):
-        self.xvfb.kill()
+        self.xvfb.terminate()
         self.xvfb.wait()
+        _remove_display_files(int(self.display_name[1:]))
 
     def create_client(self, x, y, width, height, title, fixed_size=False, dialog=False,
                       minimized=False):
@@ -137,7 +161,7 @@ class X11BackendTest(XvfbTestCase):
     def test_cascades_three_windows_exactly(self):
         windows = [self.create_client(100 + 40 * i, 100, 400, 300, "w%d" % i) for i in range(3)]
         self.cascade()
-        expected = [Rect(20, 20, 1820, 1040), Rect(20, 50, 1850, 1010), Rect(20, 80, 1880, 980)]
+        expected = [Rect(20, 20, 1640, 1040), Rect(20, 60, 1760, 1000), Rect(20, 100, 1880, 960)]
         for window, rect in zip(windows, expected):
             self.assertEqual(self.visible(window), rect)
 
