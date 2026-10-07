@@ -39,6 +39,7 @@ class Settings:
     skip_fullscreen: bool = True
     skip_sticky: bool = True
     restore_maximized: bool = True
+    workarea_dock_windows: bool = True
 
 
 # Configuration path -> (attribute, minimum, maximum)
@@ -64,6 +65,7 @@ _BOOL_KEYS: Dict[Tuple[str, ...], str] = {
     ("skip", "fullscreen"): "skip_fullscreen",
     ("skip", "sticky"): "skip_sticky",
     ("restore_maximized",): "restore_maximized",
+    ("workarea", "dock_windows"): "workarea_dock_windows",
 }
 
 _CHOICE_KEYS: Dict[Tuple[str, ...], Tuple[str, Tuple[str, ...]]] = {
@@ -164,6 +166,7 @@ def settings_to_dict(settings: Settings) -> dict:
         ("wrap",),
         ("skip",),
         ("restore_maximized",),
+        ("workarea",),
     ]
     for head in order:
         for path, attr in table.items():
@@ -208,6 +211,12 @@ _COMMENTS = {
         "instead, so everything stays in one cascade."
     ),
     ("skip",): "Windows that are left completely alone when true.",
+    ("workarea",): (
+        "How the free area of each monitor is found. dock_windows=true: panels and launchers that do "
+        "not reserve screen space in the standard way (for example the Unity 7 launcher and top "
+        "panel) are treated as obstacles, using their position and size. Set it to false if windows "
+        "end up too far from the edges because of an overlay that is wrongly taken for a panel."
+    ),
 }
 
 _COMMENT_AFTER = {

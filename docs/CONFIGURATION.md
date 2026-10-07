@@ -24,7 +24,8 @@ Unknown keys are ignored with a warning. Invalid values make the command stop wi
   "order": "stacking",
   "wrap": { "enabled": true, "offset": 12 },
   "skip": { "minimized": true, "fullscreen": true, "sticky": true },
-  "restore_maximized": true
+  "restore_maximized": true,
+  "workarea": { "dock_windows": true }
 }
 ```
 
@@ -42,6 +43,7 @@ Unknown keys are ignored with a warning. Invalid values make the command stop wi
 | `skip.minimized` | Do not touch minimized windows. |
 | `skip.fullscreen` | Do not touch fullscreen windows. |
 | `skip.sticky` | Do not touch windows that are shown on all workspaces. |
+| `workarea.dock_windows` | Treat panels and launchers that do not reserve screen space in the standard way (for example the Unity 7 launcher and top panel) as obstacles, using their position and size. Turn off if an overlay is wrongly taken for a panel. |
 | `restore_maximized` | Restore maximized windows to normal size before cascading. When `false` they are left alone. |
 
 Dialogs and other non-normal windows are never moved.

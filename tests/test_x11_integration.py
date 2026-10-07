@@ -91,7 +91,7 @@ class XvfbTestCase(unittest.TestCase):
         _remove_display_files(int(self.display_name[1:]))
 
     def create_client(self, x, y, width, height, title, fixed_size=False, dialog=False,
-                      minimized=False, increments=None):
+                      minimized=False, increments=None, dock=False):
         window = self.root.create_window(
             x, y, width, height, 0, self.client.screen().root_depth, X.InputOutput, X.CopyFromParent
         )
@@ -107,10 +107,11 @@ class XvfbTestCase(unittest.TestCase):
                 flags=(1 << 6) | (1 << 8), width_inc=increments[0], height_inc=increments[1],
                 base_width=0, base_height=0,
             )
-        if dialog:
+        if dialog or dock:
+            kind = "_NET_WM_WINDOW_TYPE_DOCK" if dock else "_NET_WM_WINDOW_TYPE_DIALOG"
             window.change_property(
                 self.client.intern_atom("_NET_WM_WINDOW_TYPE"), Xatom.ATOM, 32,
-                [self.client.intern_atom("_NET_WM_WINDOW_TYPE_DIALOG")],
+                [self.client.intern_atom(kind)],
             )
         window.map()
         self.client.sync()
@@ -267,6 +268,76 @@ class ViewportBackendTest(XvfbTestCase):
         before = self.visible(there)
         self.cascade(scope=SCOPE_WORKSPACE)
         self.assertEqual(self.visible(there), before)
+
+
+@unittest.skipUnless(HAVE_XLIB, "needs python-xlib")
+class DockObstructionTest(unittest.TestCase):
+    monitor = Rect(0, 0, 1920, 1080)
+
+    def obstruction(self, dock):
+        return X11Backend._dock_obstruction(self.monitor, dock)
+
+    def test_top_bar(self):
+        self.assertEqual(self.obstruction(Rect(0, 0, 1920, 24)), (0, 0, 24, 0))
+
+    def test_bottom_bar(self):
+        self.assertEqual(self.obstruction(Rect(0, 1040, 1920, 40)), (0, 0, 0, 40))
+
+    def test_left_and_right_bars(self):
+        self.assertEqual(self.obstruction(Rect(0, 0, 64, 1080)), (64, 0, 0, 0))
+        self.assertEqual(self.obstruction(Rect(1856, 0, 64, 1080)), (0, 64, 0, 0))
+
+    def test_bar_on_another_monitor_is_ignored(self):
+        self.assertEqual(self.obstruction(Rect(1920, 0, 64, 1080)), (0, 0, 0, 0))
+
+    def test_only_the_part_on_this_monitor_counts(self):
+        self.assertEqual(self.obstruction(Rect(-30, 0, 94, 1080)), (64, 0, 0, 0))
+
+    def test_floating_small_or_huge_windows_are_ignored(self):
+        self.assertEqual(self.obstruction(Rect(800, 500, 200, 40)), (0, 0, 0, 0))   # in the middle
+        self.assertEqual(self.obstruction(Rect(0, 0, 300, 24)), (0, 0, 0, 0))       # too short a bar
+        self.assertEqual(self.obstruction(Rect(0, 0, 1920, 1080)), (0, 0, 0, 0))    # covers everything
+
+
+class DockWindowTest(XvfbTestCase):
+    """Two monitors side by side; bars that do not set struts, like the Unity 7 panel and launcher."""
+
+    def setUp(self):
+        super().setUp()
+        self.backend._monitor_rects = lambda: [
+            ("A", Rect(0, 0, 960, 1080)),
+            ("B", Rect(960, 0, 960, 1080)),
+        ]
+
+    def add_bars(self):
+        self.create_client(0, 0, 1920, 24, "panel", dock=True)
+        self.create_client(0, 0, 64, 1080, "launcher", dock=True)
+
+    def test_work_areas_exclude_the_bars_on_the_right_monitors_only(self):
+        self.add_bars()
+        areas = {m.name: m.workarea for m in self.backend.monitors()}
+        self.assertEqual(areas["A"], Rect(64, 24, 896, 1056))
+        self.assertEqual(areas["B"], Rect(960, 24, 960, 1056))
+
+    def test_cascaded_windows_stay_clear_of_the_bars_on_both_monitors(self):
+        self.add_bars()
+        left = self.create_client(200, 200, 400, 300, "left")
+        right = self.create_client(1200, 200, 400, 300, "right")
+        self.cascade()
+        self.assertEqual(self.visible(left), Rect(84, 44, 856, 1016))     # 64 + 20, 24 + 20
+        self.assertEqual(self.visible(right), Rect(980, 44, 920, 1016))   # right monitor: no launcher
+
+    def test_bars_are_ignored_when_the_setting_is_off(self):
+        self.backend.use_dock_windows = False
+        self.add_bars()
+        areas = {m.name: m.workarea for m in self.backend.monitors()}
+        self.assertEqual(areas["A"], Rect(0, 0, 960, 1080))
+
+    def test_diagnose_lists_the_bars(self):
+        self.add_bars()
+        text = "\n".join(self.backend.diagnose())
+        self.assertIn("dock window 'panel'", text)
+        self.assertIn("dock window 'launcher'", text)
 
 
 if __name__ == "__main__":

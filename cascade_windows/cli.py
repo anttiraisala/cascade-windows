@@ -69,7 +69,7 @@ def _notify(title: str, message: str) -> None:
         pass
 
 
-def create_backend(allow_wayland: bool = False) -> Backend:
+def create_backend(allow_wayland: bool = False, settings=None) -> Backend:
     if os.environ.get("XDG_SESSION_TYPE", "").lower() == "wayland" and not allow_wayland:
         raise BackendError(
             "This is a Wayland session. This version works with X11 sessions only "
@@ -77,7 +77,7 @@ def create_backend(allow_wayland: bool = False) -> Backend:
         )
     from .x11_backend import X11Backend
 
-    return X11Backend()
+    return X11Backend(use_dock_windows=True if settings is None else settings.workarea_dock_windows)
 
 
 def _run(args: argparse.Namespace) -> int:
@@ -116,7 +116,7 @@ def _run(args: argparse.Namespace) -> int:
         return 0
 
     settings = load_settings(args.config, warn=lambda message: print("warning: " + message, file=sys.stderr))
-    backend = create_backend(args.allow_wayland)
+    backend = create_backend(args.allow_wayland, settings)
 
     if args.diagnose:
         print("cascade-windows %s" % __version__)

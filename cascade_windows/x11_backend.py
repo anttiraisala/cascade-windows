@@ -110,7 +110,7 @@ def _to_unsigned(value: int) -> int:
 class X11Backend(Backend):
     name = "x11"
 
-    def __init__(self, display_name: Optional[str] = None) -> None:
+    def __init__(self, display_name: Optional[str] = None, use_dock_windows: bool = True) -> None:
         if _IMPORT_ERROR is not None:
             raise BackendError(
                 "The Python X11 library is missing. Install it with: sudo apt install python3-xlib"
@@ -119,6 +119,7 @@ class X11Backend(Backend):
             self.display = display.Display(display_name)
         except Exception as problem:  # noqa: BLE001 - python-xlib raises several types
             raise BackendError("Cannot connect to the X server: %s" % problem)
+        self.use_dock_windows = use_dock_windows
         self.display.set_error_handler(self._ignore_error)
         self.root = self.display.screen().root
         self._atoms: Dict[str, int] = {}
@@ -194,6 +195,23 @@ class X11Backend(Backend):
         if isinstance(value, bytes):
             return value.decode("utf-8", "replace")
         return str(value)
+
+    def _label(self, window) -> str:
+        """A readable name for a window: its title, its class, or its id."""
+        title = self._text(window, "_NET_WM_NAME")
+        if not title:
+            try:
+                value = window.get_wm_name()
+                title = value if isinstance(value, str) else ""
+            except error.XError:
+                title = ""
+        if not title:
+            try:
+                pair = window.get_wm_class()
+                title = pair[1] if pair else ""
+            except error.XError:
+                title = ""
+        return title or hex(window.id)
 
     def _send_client_message(self, window, type_name: str, values) -> None:
         data = [_to_unsigned(v) for v in values] + [0] * (5 - len(values))
@@ -314,16 +332,88 @@ class X11Backend(Backend):
                 strut = _Strut(*values[:4], 0, last_y, 0, last_y, 0, last_x, 0, last_x)
             if not any((strut.left, strut.right, strut.top, strut.bottom)):
                 continue
-            title = self._text(window, "_NET_WM_NAME") or hex(wid)
+            title = self._label(window)
             found.append((title, strut))
         return found
+
+    def _dock_rects(self) -> List[Tuple[str, Rect]]:
+        """Visible dock-type windows (panels, launchers) with their position and size on screen.
+
+        Some desktops, notably Unity 7, do not reserve screen space with the standard strut
+        properties, so the only way to know that a bar covers a screen edge is to look at the bar.
+        """
+        candidates: List[int] = []
+        seen: Set[int] = set()
+        for wid in self._cardinals(self.root, "_NET_CLIENT_LIST"):
+            if wid not in seen:
+                seen.add(wid)
+                candidates.append(wid)
+        try:
+            for child in self.root.query_tree().children:
+                if child.id not in seen:
+                    seen.add(child.id)
+                    candidates.append(child.id)
+        except error.XError:
+            pass
+        found: List[Tuple[str, Rect]] = []
+        for wid in candidates:
+            window = self.display.create_resource_object("window", wid)
+            if "_NET_WM_WINDOW_TYPE_DOCK" not in self._atom_set(window, "_NET_WM_WINDOW_TYPE"):
+                continue
+            try:
+                if window.get_attributes().map_state != X.IsViewable:
+                    continue
+                geometry = window.get_geometry()
+                origin = self.root.translate_coords(window, 0, 0)
+            except error.XError:
+                continue
+            title = self._label(window)
+            found.append(
+                (title, Rect(int(origin.x), int(origin.y), int(geometry.width), int(geometry.height)))
+            )
+        return found
+
+    @staticmethod
+    def _dock_obstruction(monitor: Rect, dock: Rect) -> Tuple[int, int, int, int]:
+        """(left, right, top, bottom) space a dock window takes from a monitor.
+
+        Only bars that lie along one edge of the monitor count: they must touch that edge and
+        span at least half of it. Anything else (floating docks, large overlays) is ignored.
+        """
+        visible = dock.intersect(monitor)
+        if visible.width == 0 or visible.height == 0:
+            return 0, 0, 0, 0
+        if visible.width * visible.height * 2 > monitor.width * monitor.height:
+            return 0, 0, 0, 0
+        slack = 2
+        left = right = top = bottom = 0
+        wide = visible.width * 2 >= monitor.width
+        tall = visible.height * 2 >= monitor.height
+        if wide and visible.y <= monitor.y + slack:
+            top = visible.bottom - monitor.y
+        elif wide and visible.bottom >= monitor.bottom - slack:
+            bottom = monitor.bottom - visible.y
+        elif tall and visible.x <= monitor.x + slack:
+            left = visible.right - monitor.x
+        elif tall and visible.right >= monitor.right - slack:
+            right = monitor.right - visible.x
+        return left, right, top, bottom
 
     @staticmethod
     def _overlaps(start_a: int, end_a: int, start_b: int, end_b: int) -> bool:
         return start_a <= end_b and start_b <= end_a
 
-    def _work_area_for(self, rect: Rect, struts: List[Tuple[str, _Strut]]) -> Rect:
+    def _work_area_for(
+        self,
+        rect: Rect,
+        struts: List[Tuple[str, _Strut]],
+        docks: Optional[List[Tuple[str, Rect]]] = None,
+    ) -> Rect:
         left = right = top = bottom = 0
+        for _title, dock in docks or []:
+            d_left, d_right, d_top, d_bottom = self._dock_obstruction(rect, dock)
+            left, right = max(left, d_left), max(right, d_right)
+            top, bottom = max(top, d_top), max(bottom, d_bottom)
         for _title, s in struts:
             if s.left > rect.x and self._overlaps(
                 s.left_start_y, s.left_end_y, rect.y, rect.bottom - 1
@@ -370,9 +460,10 @@ class X11Backend(Backend):
 
     def monitors(self) -> List[Monitor]:
         struts = self._struts()
+        docks = self._dock_rects() if self.use_dock_windows else []
         result = []
         for index, (name, rect) in enumerate(self._monitor_rects()):
-            result.append(Monitor(index, name, rect, self._work_area_for(rect, struts)))
+            result.append(Monitor(index, name, rect, self._work_area_for(rect, struts, docks)))
         return result
 
     def pointer_position(self) -> Tuple[int, int]:
@@ -711,6 +802,9 @@ class X11Backend(Backend):
             lines.append(
                 "strut from %r: left=%d right=%d top=%d bottom=%d" % (title[:30], s.left, s.right, s.top, s.bottom)
             )
+        lines.append("dock windows used as obstacles: %s" % self.use_dock_windows)
+        for title, rect in self._dock_rects():
+            lines.append("dock window %r: %s" % (title[:30], rect))
         for monitor in self.monitors():
             lines.append(
                 "monitor %d %s: %s, work area %s" % (monitor.index, monitor.name, monitor.rect, monitor.workarea)
