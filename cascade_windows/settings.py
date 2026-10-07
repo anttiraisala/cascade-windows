@@ -175,6 +175,31 @@ def default_settings_dict() -> dict:
     return settings_to_dict(Settings())
 
 
+def _legacy_default_dict() -> dict:
+    """The defaults that version 0.1.0 wrote to the configuration file (steps were 30 and 30)."""
+    legacy = default_settings_dict()
+    legacy["step"] = {"x": 30, "y": 30}
+    return legacy
+
+
+def remove_legacy_default_config(path: Optional[str] = None) -> bool:
+    """Delete a configuration file that is an untouched copy of the old defaults.
+
+    Such a file only freezes outdated defaults. Files the user has changed are never touched.
+    Returns True when a file was removed.
+    """
+    path = path or config_path()
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, ValueError):
+        return False
+    if data != _legacy_default_dict():
+        return False
+    os.remove(path)
+    return True
+
+
 def load_settings(
     path: Optional[str] = None, warn: Optional[Callable[[str], None]] = None
 ) -> Settings:

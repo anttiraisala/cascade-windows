@@ -1,8 +1,12 @@
 # Configuration
 
 Settings live in `~/.config/cascade-windows/config.json` (or `$XDG_CONFIG_HOME/cascade-windows/config.json`).
-Every key is optional; missing keys use the defaults below. Run `cascade-windows --init-config` to write
-a file containing all defaults, or `cascade-windows --edit-config` to open it in your editor.
+The file does not exist until you create it, and then the built-in defaults below are used. Every key is
+optional; missing keys use the defaults. Run `cascade-windows --edit-config` to create the file (with all
+defaults) and open it in your editor, and `cascade-windows --show-config` to see the file path and the
+settings that are actually in effect. Note that a file written by an old version keeps its old values,
+because the file always wins over the built-in defaults; delete it, or the keys you do not want to pin,
+to get the current defaults.
 Unknown keys are ignored with a warning. Invalid values make the command stop with a clear message.
 
 ```json

@@ -7,6 +7,7 @@ from cascade_windows.settings import (
     Settings,
     SettingsError,
     default_settings_dict,
+    remove_legacy_default_config,
     load_settings,
     settings_from_dict,
     settings_to_dict,
@@ -79,6 +80,48 @@ class SettingsTest(unittest.TestCase):
                 handle.write('{"step": {"x": 1}}')
             write_default_config(path)
             self.assertEqual(load_settings(path).step_x, 1)
+
+
+class LegacyConfigTest(unittest.TestCase):
+    def write(self, folder, data):
+        path = os.path.join(folder, "config.json")
+        with open(path, "w") as handle:
+            json.dump(data, handle)
+        return path
+
+    def legacy(self):
+        data = default_settings_dict()
+        data["step"] = {"x": 30, "y": 30}
+        return data
+
+    def test_untouched_legacy_file_is_removed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = self.write(folder, self.legacy())
+            self.assertTrue(remove_legacy_default_config(path))
+            self.assertFalse(os.path.exists(path))
+
+    def test_modified_file_is_kept(self):
+        with tempfile.TemporaryDirectory() as folder:
+            data = self.legacy()
+            data["step"]["x"] = 31
+            path = self.write(folder, data)
+            self.assertFalse(remove_legacy_default_config(path))
+            self.assertTrue(os.path.exists(path))
+
+    def test_file_with_current_defaults_is_kept(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = self.write(folder, default_settings_dict())
+            self.assertFalse(remove_legacy_default_config(path))
+            self.assertTrue(os.path.exists(path))
+
+    def test_missing_or_broken_file_is_ignored(self):
+        with tempfile.TemporaryDirectory() as folder:
+            self.assertFalse(remove_legacy_default_config(os.path.join(folder, "none.json")))
+            path = os.path.join(folder, "config.json")
+            with open(path, "w") as handle:
+                handle.write("{ broken")
+            self.assertFalse(remove_legacy_default_config(path))
+            self.assertTrue(os.path.exists(path))
 
 
 if __name__ == "__main__":

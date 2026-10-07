@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import os
 import shutil
@@ -19,7 +20,14 @@ from .cascade import (
     plan_for_backend,
     restore_positions,
 )
-from .settings import SettingsError, config_path, load_settings, write_default_config
+from .settings import (
+    SettingsError,
+    config_path,
+    load_settings,
+    remove_legacy_default_config,
+    settings_to_dict,
+    write_default_config,
+)
 
 log = logging.getLogger("cascade_windows")
 
@@ -36,6 +44,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dry-run", action="store_true", help="show what would be done without moving anything")
     parser.add_argument("--config", metavar="FILE", help="use this configuration file")
     parser.add_argument("--init-config", action="store_true", help="write a configuration file with all defaults")
+    parser.add_argument("--show-config", action="store_true", help="print the configuration file path and the settings in effect")
+    parser.add_argument("--migrate-config", action="store_true", help="remove an untouched configuration file written by an older version")
     parser.add_argument("--edit-config", action="store_true", help="open the configuration file in the default editor")
     parser.add_argument("--diagnose", action="store_true", help="print information about the environment and windows")
     parser.add_argument("--install-keybinding", metavar="COMMAND", help="register the keyboard shortcut for COMMAND")
@@ -80,6 +90,15 @@ def _run(args: argparse.Namespace) -> int:
             print(path)
             return 0
         subprocess.Popen([opener, path])
+        return 0
+    if args.migrate_config:
+        if remove_legacy_default_config(path):
+            print("Removed the unmodified configuration file written by an earlier version: " + path)
+        return 0
+    if args.show_config:
+        settings = load_settings(args.config, warn=lambda message: print("warning: " + message, file=sys.stderr))
+        print("configuration file: %s%s" % (path, "" if os.path.exists(path) else " (not found, using defaults)"))
+        print(json.dumps(settings_to_dict(settings), indent=2))
         return 0
     if args.install_keybinding:
         print(keybinding.install(args.install_keybinding, args.binding))

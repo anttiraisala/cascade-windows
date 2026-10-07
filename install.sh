@@ -83,8 +83,10 @@ if [ "$nemo" -eq 1 ]; then
     echo "If they do not appear, restart the desktop file manager with: nemo --quit"
 fi
 
-"$command_path" --init-config >/dev/null
-echo "Configuration file: ${XDG_CONFIG_HOME:-$HOME/.config}/cascade-windows/config.json"
+# An untouched configuration file from an older version only freezes outdated defaults.
+"$command_path" --migrate-config || true
+echo "Settings: built-in defaults unless ${XDG_CONFIG_HOME:-$HOME/.config}/cascade-windows/config.json exists."
+echo "          Run 'cascade-windows --edit-config' to create and edit it, 'cascade-windows --show-config' to see what is in effect."
 
 if [ "$keybinding" -eq 1 ]; then
     if "$command_path" --install-keybinding "$command_path --scope monitor" 2>/dev/null; then
