@@ -23,8 +23,12 @@ class FakeGsettings:
 
     def __call__(self, *args):
         command = args[0]
+        # Like the real gsettings, the per-shortcut schemas are relocatable and are only listed
+        # by list-relocatable-schemas, never by list-schemas.
         if command == "list-schemas":
-            return "\n".join(self.schemas)
+            return "\n".join(name for name in self.schemas if not name.endswith("custom-keybinding"))
+        if command == "list-relocatable-schemas":
+            return "\n".join(name for name in self.schemas if name.endswith("custom-keybinding"))
         if command == "get":
             return self.values.get((args[1], args[2]), "@as []")
         if command == "set":
@@ -88,7 +92,13 @@ class KeybindingTest(unittest.TestCase):
             fake.values[("org.cinnamon.desktop.keybindings", "custom-list")], "['custom0']"
         )
 
-    def test_missing_schema_is_reported(self):
+    def test_missing_schema_is_reported_by_name(self):
+        self.run_with("X-Cinnamon", CINNAMON_SCHEMAS[:1])  # the relocatable schema is missing
+        with self.assertRaises(keybinding.KeybindingError) as context:
+            keybinding.install("cmd")
+        self.assertIn("custom-keybinding", str(context.exception))
+
+    def test_no_schemas_at_all_is_reported(self):
         self.run_with("Unity:Unity7:ubuntu", [])
         with self.assertRaises(keybinding.KeybindingError):
             keybinding.install("cmd")

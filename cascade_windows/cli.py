@@ -131,7 +131,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return _run(args)
     except (BackendError, SettingsError, keybinding.KeybindingError) as problem:
         print("cascade-windows: %s" % problem, file=sys.stderr)
-        _notify("Cascade Windows", str(problem))
+        if not (args.install_keybinding or args.remove_keybinding):
+            _notify("Cascade Windows", str(problem))
         return 1
     except KeyboardInterrupt:
         return 130

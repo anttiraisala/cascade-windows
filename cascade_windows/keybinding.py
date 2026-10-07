@@ -36,10 +36,20 @@ def _gsettings(*args: str) -> str:
 
 
 def _schema_exists(schema: str) -> bool:
-    try:
-        return schema in _gsettings("list-schemas").split()
-    except KeybindingError:
-        return False
+    """Check both normal and relocatable schemas (the per-shortcut schema is relocatable)."""
+    for listing in ("list-schemas", "list-relocatable-schemas"):
+        try:
+            if schema in _gsettings(listing).split():
+                return True
+        except KeybindingError:
+            continue
+    return False
+
+
+def _require_schemas(*schemas: str) -> None:
+    for schema in schemas:
+        if not _schema_exists(schema):
+            raise KeybindingError("The %s settings schema is not available" % schema)
 
 
 def _get_list(schema: str, key: str) -> List[str]:
@@ -81,8 +91,7 @@ def install(command: str, binding: str = DEFAULT_BINDING) -> str:
     if flavour is None:
         raise KeybindingError("Unsupported desktop %r" % os.environ.get("XDG_CURRENT_DESKTOP"))
     list_schema, list_key, item_schema, item_path = _schemas(flavour)
-    if not _schema_exists(list_schema) or not _schema_exists(item_schema):
-        raise KeybindingError("The %s settings schema is not available" % list_schema)
+    _require_schemas(list_schema, item_schema)
     path = item_path % BINDING_NAME
     schema_with_path = "%s:%s" % (item_schema, path)
     _gsettings("set", schema_with_path, "name", "Cascade Windows")
@@ -103,8 +112,7 @@ def remove() -> str:
     if flavour is None:
         raise KeybindingError("Unsupported desktop %r" % os.environ.get("XDG_CURRENT_DESKTOP"))
     list_schema, list_key, item_schema, item_path = _schemas(flavour)
-    if not _schema_exists(list_schema):
-        raise KeybindingError("The %s settings schema is not available" % list_schema)
+    _require_schemas(list_schema)
     entries = [e for e in _get_list(list_schema, list_key) if e != _entry(flavour)]
     _set_list(list_schema, list_key, entries)
     _gsettings("reset-recursively", "%s:%s" % (item_schema, item_path % BINDING_NAME))
