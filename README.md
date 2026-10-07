@@ -34,10 +34,22 @@ adds the desktop right-click entries (Nemo) and registers the `Super+Shift+C` sh
 ./install.sh --install-deps      install python3-xlib with apt (asks for sudo)
 ./install.sh --no-keybinding     do not register the shortcut
 ./install.sh --no-submenu        show the right-click entries as a flat list instead of one submenu
+./install.sh --reset-config      replace the configuration file with a fresh one holding all defaults
+                                 (the old file is kept as config.json.bak)
 ./install.sh --force             install even on a Wayland session
+./install.sh --help              list the options
 ```
 
-Uninstall with `./uninstall.sh`. Update with `git pull` and `./install.sh`.
+Update with `git pull` and `./install.sh`. A normal install never overwrites your configuration file.
+
+Uninstall:
+
+```
+./uninstall.sh                   remove the program, the shortcut and the menu entries; keep the configuration
+./uninstall.sh --purge           also delete the configuration file (and its backup) and the undo state
+./uninstall.sh --remove-config   same as --purge
+./uninstall.sh --help            list the options
+```
 
 Make sure `~/.local/bin` is in your `PATH` (Ubuntu and Mint add it automatically after the first login
 once the folder exists).
@@ -46,11 +58,11 @@ once the folder exists).
 
 | Action | How |
 |---|---|
-| Cascade this monitor | `Super+Shift+C`, or right-click the desktop and choose **Cascade Windows > Monitor** |
-| Cascade all monitors of this workspace | desktop menu: **Cascade Windows > Workspace** |
-| Cascade every workspace | desktop menu: **Cascade Windows > All Workspaces** |
-| Undo | desktop menu: **Cascade Windows > Undo** |
-| Edit settings | desktop menu: **Cascade Windows > Settings...** |
+| Cascade this monitor | `Super+Shift+C`, or right-click the desktop and choose **Cascade Windows** |
+| Cascade all monitors of this workspace | desktop menu: **Cascade Workspace** |
+| Cascade every workspace | desktop menu: **Cascade All Workspaces** |
+| Undo | desktop menu: **Undo Cascade** |
+| Edit settings | desktop menu: **Cascade Settings...** |
 
 The entries are grouped into one submenu through Nemo's layout file `~/.config/nemo/actions-tree.json`. The
 installer only adds its own submenu to that file and keeps everything else in it. If the file cannot be
@@ -60,8 +72,27 @@ Command line:
 
 ```
 cascade-windows [--scope monitor|workspace|all] [--undo] [--dry-run]
-                [--config FILE] [--init-config] [--edit-config] [--diagnose] [--verbose]
+                [--config FILE] [--init-config] [--edit-config] [--reset-config] [--show-config]
+                [--diagnose] [--verbose]
 ```
+
+| Option | Meaning |
+|---|---|
+| `--scope monitor\|workspace\|all` | What to cascade: the monitor under the pointer (default), every monitor of this workspace, or everything. |
+| `--undo` | Restore the positions from before the last cascade. |
+| `--dry-run` | Show what would be done without moving anything. |
+| `--config FILE` | Use this configuration file instead of the default one. |
+| `--init-config` | Write a configuration file with all defaults, unless one exists. |
+| `--edit-config` | Create the configuration file if missing and open it in the default editor. |
+| `--reset-config` | Replace the configuration file with a fresh one holding all defaults. The old file is saved as `config.json.bak`. |
+| `--show-config` | Print the configuration file path and the settings in effect. |
+| `--migrate-config` | Remove an untouched configuration file written by an older version (the installer does this). |
+| `--diagnose` | Print the environment, monitors, work areas and windows. |
+| `--install-keybinding COMMAND`, `--binding KEYS`, `--remove-keybinding` | Register or remove the keyboard shortcut (default `<Super><Shift>c`). |
+| `--install-nemo-menu`, `--remove-nemo-menu` | Group the desktop right-click entries into a submenu, or back into a flat list. |
+| `--allow-wayland` | Run on a Wayland session (only X11 windows can be moved). |
+| `-v`, `--verbose` | Print debug information. |
+| `--version` | Print the version. |
 
 `cascade-windows --diagnose` prints the detected environment, monitors, work areas and windows. Please
 attach its output when reporting a problem.

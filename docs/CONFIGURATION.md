@@ -11,6 +11,8 @@ JSON has no comments, so explanations are ordinary keys named `comment` (one per
 `comment_<setting>` (above a single setting, for example `comment_size_mode`). The program ignores them at
 every level, so you can edit or delete them freely. `--edit-config` writes a new file with all of them; a
 file you created earlier keeps what it has.
+To start over with the current defaults, run `cascade-windows --reset-config` (or `./install.sh --reset-config`); the old
+file is saved as `config.json.bak`. `./uninstall.sh --purge` deletes the file and its backup.
 Unknown keys are ignored with a warning. Invalid values make the command stop with a clear message.
 
 ```json

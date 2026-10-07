@@ -25,6 +25,7 @@ from .settings import (
     config_path,
     load_settings,
     remove_legacy_default_config,
+    reset_config,
     settings_to_dict,
     write_default_config,
 )
@@ -44,6 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dry-run", action="store_true", help="show what would be done without moving anything")
     parser.add_argument("--config", metavar="FILE", help="use this configuration file")
     parser.add_argument("--init-config", action="store_true", help="write a configuration file with all defaults")
+    parser.add_argument("--reset-config", action="store_true", help="replace the configuration file with a fresh one holding all defaults (the old one is saved as config.json.bak)")
     parser.add_argument("--show-config", action="store_true", help="print the configuration file path and the settings in effect")
     parser.add_argument("--migrate-config", action="store_true", help="remove an untouched configuration file written by an older version")
     parser.add_argument("--edit-config", action="store_true", help="open the configuration file in the default editor")
@@ -84,6 +86,9 @@ def _run(args: argparse.Namespace) -> int:
     path = args.config or config_path()
     if args.init_config:
         print(write_default_config(path))
+        return 0
+    if args.reset_config:
+        print(reset_config(path))
         return 0
     if args.edit_config:
         write_default_config(path)

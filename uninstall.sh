@@ -5,10 +5,11 @@ set -eu
 purge=0
 for argument in "$@"; do
     case "$argument" in
-        --purge) purge=1 ;;
+        --purge|--remove-config) purge=1 ;;
         -h|--help)
             echo "Usage: ./uninstall.sh [--purge]"
-            echo "  --purge   also delete the configuration file and the undo state"
+            echo "  --purge          also delete the configuration file (and its backup) and the undo state"
+            echo "  --remove-config  same as --purge"
             exit 0
             ;;
         *) echo "Unknown option: $argument" >&2; exit 2 ;;
@@ -32,5 +33,5 @@ if [ "$purge" -eq 1 ]; then
     rm -rf "${XDG_STATE_HOME:-$HOME/.local/state}/cascade-windows"
     echo "Removed cascade-windows, its configuration and its state."
 else
-    echo "Removed cascade-windows. The configuration file was kept (use --purge to delete it)."
+    echo "Removed cascade-windows. The configuration file was kept (use --purge to delete it too)."
 fi

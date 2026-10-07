@@ -11,6 +11,8 @@ Options:
   --no-keybinding    do not register the Super+Shift+C shortcut
   --no-nemo          do not install the desktop right-click menu entries
   --no-submenu       show the right-click entries as a flat list instead of one submenu
+  --reset-config     replace the configuration file with a fresh one holding all defaults
+                     (the old file is kept as config.json.bak)
   --force            install even on a Wayland session
   -h, --help         show this help
 USAGE
@@ -21,12 +23,14 @@ keybinding=1
 nemo=1
 submenu=1
 force=0
+reset_config=0
 for argument in "$@"; do
     case "$argument" in
         --install-deps) install_deps=1 ;;
         --no-keybinding) keybinding=0 ;;
         --no-nemo) nemo=0 ;;
         --no-submenu) submenu=0 ;;
+        --reset-config) reset_config=1 ;;
         --force) force=1 ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown option: $argument" >&2; usage >&2; exit 2 ;;
@@ -91,6 +95,9 @@ if [ "$nemo" -eq 1 ]; then
     echo "If they do not appear, restart the desktop file manager with: nemo --quit"
 fi
 
+if [ "$reset_config" -eq 1 ]; then
+    "$command_path" --reset-config
+fi
 # An untouched configuration file from an older version only freezes outdated defaults.
 "$command_path" --migrate-config || true
 echo "Settings: built-in defaults unless ${XDG_CONFIG_HOME:-$HOME/.config}/cascade-windows/config.json exists."

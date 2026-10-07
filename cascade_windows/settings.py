@@ -332,6 +332,23 @@ def load_settings(
     return settings_from_dict(data, warn)
 
 
+def reset_config(path: Optional[str] = None) -> str:
+    """Replace the configuration file with a fresh documented default file.
+
+    An existing file is first copied to ``config.json.bak`` (an older backup is replaced).
+    Returns a message describing what was done.
+    """
+    path = path or config_path()
+    backup = None
+    if os.path.exists(path):
+        backup = path + ".bak"
+        os.replace(path, backup)
+    write_default_config(path)
+    if backup:
+        return "Wrote a fresh configuration file %s (the previous one was saved as %s)" % (path, backup)
+    return "Wrote a fresh configuration file " + path
+
+
 def write_default_config(path: Optional[str] = None, overwrite: bool = False) -> str:
     """Write a configuration file containing all defaults and return its path."""
     path = path or config_path()

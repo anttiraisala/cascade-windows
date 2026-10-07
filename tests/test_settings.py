@@ -10,6 +10,7 @@ from cascade_windows.settings import (
     default_settings_dict,
     documented_default_dict,
     remove_legacy_default_config,
+    reset_config,
     load_settings,
     settings_from_dict,
     settings_to_dict,
@@ -182,6 +183,29 @@ class LegacyConfigTest(unittest.TestCase):
                 handle.write("{ broken")
             self.assertFalse(remove_legacy_default_config(path))
             self.assertTrue(os.path.exists(path))
+
+
+class ResetConfigTest(unittest.TestCase):
+    def test_existing_file_is_backed_up_and_replaced_with_defaults(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "sub", "config.json")
+            os.makedirs(os.path.dirname(path))
+            with open(path, "w") as handle:
+                json.dump({"step": {"x": 5, "y": 5}}, handle)
+            message = reset_config(path)
+            self.assertIn(path + ".bak", message)
+            with open(path + ".bak") as handle:
+                self.assertEqual(json.load(handle), {"step": {"x": 5, "y": 5}})
+            self.assertEqual(load_settings(path), Settings())
+            with open(path) as handle:
+                self.assertIn(COMMENT_KEY, json.load(handle))
+
+    def test_missing_file_is_simply_created(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "new", "config.json")
+            reset_config(path)
+            self.assertTrue(os.path.exists(path))
+            self.assertFalse(os.path.exists(path + ".bak"))
 
 
 if __name__ == "__main__":
