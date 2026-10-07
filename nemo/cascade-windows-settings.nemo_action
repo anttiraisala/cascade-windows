@@ -1,0 +1,8 @@
+[Nemo Action]
+Active=true
+Name=Cascade Settings...
+Comment=Edit the cascade-windows configuration file
+Exec=@COMMAND@ --edit-config
+Icon-Name=preferences-system-symbolic
+Selection=none
+Extensions=any;

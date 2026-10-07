@@ -1,0 +1,4 @@
+#!/bin/sh
+# Run cascade-windows straight from a source checkout, without installing it.
+root=$(cd "$(dirname "$0")/.." && pwd)
+exec env PYTHONPATH="$root${PYTHONPATH:+:$PYTHONPATH}" python3 -m cascade_windows "$@"

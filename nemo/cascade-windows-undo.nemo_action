@@ -1,0 +1,8 @@
+[Nemo Action]
+Active=true
+Name=Undo Cascade
+Comment=Put the windows back where they were before the last cascade
+Exec=@COMMAND@ --undo
+Icon-Name=edit-undo-symbolic
+Selection=none
+Extensions=any;

@@ -1,0 +1,8 @@
+[Nemo Action]
+Active=true
+Name=Cascade Windows
+Comment=Arrange the windows of this monitor in a cascade
+Exec=@COMMAND@ --scope monitor
+Icon-Name=view-restore-symbolic
+Selection=none
+Extensions=any;

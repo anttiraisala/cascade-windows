@@ -1,0 +1,8 @@
+[Nemo Action]
+Active=true
+Name=Cascade Workspace
+Comment=Cascade the windows on every monitor of this workspace
+Exec=@COMMAND@ --scope workspace
+Icon-Name=view-restore-symbolic
+Selection=none
+Extensions=any;
