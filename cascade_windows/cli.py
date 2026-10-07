@@ -32,6 +32,8 @@ from .settings import (
 
 log = logging.getLogger("cascade_windows")
 
+BACKEND_CHOICES = ("auto", "x11", "gnome")
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -55,6 +57,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--remove-keybinding", action="store_true", help="remove the keyboard shortcut")
     parser.add_argument("--install-nemo-menu", action="store_true", help="group the desktop right-click entries into a 'Cascade Windows' submenu")
     parser.add_argument("--remove-nemo-menu", action="store_true", help="remove the submenu and show the entries as a flat list again")
+    parser.add_argument("--backend", choices=BACKEND_CHOICES, default="auto",
+                        help="window system access: x11, gnome (GNOME Shell extension) or auto (default)")
     parser.add_argument("--allow-wayland", action="store_true", help="run even on a Wayland session (only X11 windows can be moved)")
     parser.add_argument("-v", "--verbose", action="store_true", help="print debug information")
     parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
@@ -71,11 +75,35 @@ def _notify(title: str, message: str) -> None:
         pass
 
 
-def create_backend(allow_wayland: bool = False, settings=None) -> Backend:
-    if os.environ.get("XDG_SESSION_TYPE", "").lower() == "wayland" and not allow_wayland:
+def desktop_is_gnome(environ=None) -> bool:
+    """True when XDG_CURRENT_DESKTOP names GNOME (for example "ubuntu:GNOME")."""
+    environ = os.environ if environ is None else environ
+    return any(part.strip().upper() == "GNOME" for part in environ.get("XDG_CURRENT_DESKTOP", "").split(":"))
+
+
+def create_backend(allow_wayland: bool = False, settings=None, kind: str = "auto", environ=None,
+                   gnome_backend=None) -> Backend:
+    """Pick the window system backend.
+
+    ``auto`` uses the GNOME Shell extension on GNOME desktops when it answers, and the X11 backend
+    everywhere else, so Linux Mint and Unity 7 behave exactly as before.
+    """
+    environ = os.environ if environ is None else environ
+    if kind not in BACKEND_CHOICES:
+        raise BackendError("Unknown backend %r" % kind)
+    if kind == "gnome" or (kind == "auto" and desktop_is_gnome(environ)):
+        from .gnome_backend import GnomeBackend, extension_missing_message
+
+        backend = gnome_backend or GnomeBackend()
+        if kind == "gnome" or backend.transport.is_available():
+            return backend
+        if environ.get("XDG_SESSION_TYPE", "").lower() == "wayland":
+            raise BackendError(extension_missing_message())
+    if environ.get("XDG_SESSION_TYPE", "").lower() == "wayland" and not allow_wayland:
         raise BackendError(
-            "This is a Wayland session. This version works with X11 sessions only "
-            "(Linux Mint Cinnamon, Ubuntu Unity 7). Support for GNOME on Wayland is planned."
+            "This is a Wayland session without the GNOME Shell extension. The X11 backend cannot move "
+            "Wayland windows. On GNOME, install and enable the extension (./install.sh); other Wayland "
+            "desktops are not supported."
         )
     from .x11_backend import X11Backend
 
@@ -121,7 +149,7 @@ def _run(args: argparse.Namespace) -> int:
         return 0
 
     settings = load_settings(args.config, warn=lambda message: print("warning: " + message, file=sys.stderr))
-    backend = create_backend(args.allow_wayland, settings)
+    backend = create_backend(args.allow_wayland, settings, args.backend)
 
     if args.diagnose:
         print("cascade-windows %s" % __version__)
