@@ -110,12 +110,16 @@ more **cascade regions** by `regions.py`, and windows are grouped per region ins
 Today the function returns the whole work area. The planned options, global and overridable per
 monitor (by output name such as `DP-1`, or by index):
 
-- `max_aspect`: limit the region to a maximum aspect ratio (for example 16:9) and place it with
-  `align` (left, center, right). Activated automatically above roughly 2:1, can be disabled.
-- `split`: divide the monitor into 2 or 3 virtual screens, each cascaded on its own. A window belongs
-  to the part that contains its center.
+- `split` (**the default for ultrawide monitors**): divide the monitor into virtual screens, each
+  cascaded on its own as if it were a normal monitor. A window belongs to the part that contains its
+  center. The number of parts is chosen automatically from the aspect ratio (for example a 32:9
+  monitor becomes two 16:9 parts, a 48:9 monitor three), and can be set explicitly. The exact
+  threshold is decided during implementation.
+- `max_aspect` (alternative, selectable in the settings): limit one region to a maximum aspect ratio
+  (for example 16:9) and place it with `align` (left, center, right).
 - `ignore`: leave a monitor alone.
 - Per-monitor `margin`, `step` and `min_size`.
+- The auto-detection can be disabled so that an ultrawide monitor behaves like any other monitor.
 
 Portrait (rotated) monitors already work with the same algorithm because sizes are derived from the
 usable width and height; per-monitor step and minimum size overrides cover the remaining cases.
