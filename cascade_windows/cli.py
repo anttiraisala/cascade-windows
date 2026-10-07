@@ -11,7 +11,7 @@ import subprocess
 import sys
 from typing import List, Optional
 
-from . import __version__, keybinding, undo
+from . import __version__, keybinding, nemo_menu, undo
 from .backend import Backend, BackendError
 from .cascade import (
     SCOPE_MONITOR,
@@ -51,6 +51,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--install-keybinding", metavar="COMMAND", help="register the keyboard shortcut for COMMAND")
     parser.add_argument("--binding", default=keybinding.DEFAULT_BINDING, help="shortcut used with --install-keybinding (default: %(default)s)")
     parser.add_argument("--remove-keybinding", action="store_true", help="remove the keyboard shortcut")
+    parser.add_argument("--install-nemo-menu", action="store_true", help="group the desktop right-click entries into a 'Cascade Windows' submenu")
+    parser.add_argument("--remove-nemo-menu", action="store_true", help="remove the submenu and show the entries as a flat list again")
     parser.add_argument("--allow-wayland", action="store_true", help="run even on a Wayland session (only X11 windows can be moved)")
     parser.add_argument("-v", "--verbose", action="store_true", help="print debug information")
     parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
@@ -90,6 +92,12 @@ def _run(args: argparse.Namespace) -> int:
             print(path)
             return 0
         subprocess.Popen([opener, path])
+        return 0
+    if args.install_nemo_menu:
+        print(nemo_menu.install())
+        return 0
+    if args.remove_nemo_menu:
+        print(nemo_menu.remove())
         return 0
     if args.migrate_config:
         if remove_legacy_default_config(path):
@@ -148,9 +156,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     try:
         return _run(args)
-    except (BackendError, SettingsError, keybinding.KeybindingError) as problem:
+    except (BackendError, SettingsError, keybinding.KeybindingError, nemo_menu.NemoMenuError) as problem:
         print("cascade-windows: %s" % problem, file=sys.stderr)
-        if not (args.install_keybinding or args.remove_keybinding):
+        if not (args.install_keybinding or args.remove_keybinding
+                or args.install_nemo_menu or args.remove_nemo_menu):
             _notify("Cascade Windows", str(problem))
         return 1
     except KeyboardInterrupt:

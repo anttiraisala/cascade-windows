@@ -21,6 +21,7 @@ command_path="$HOME/.local/bin/cascade-windows"
 
 if [ -x "$command_path" ]; then
     "$command_path" --remove-keybinding >/dev/null 2>&1 || true
+    "$command_path" --remove-nemo-menu >/dev/null 2>&1 || true
 fi
 rm -f "$command_path"
 rm -rf "$install_dir"

@@ -33,6 +33,7 @@ adds the desktop right-click entries (Nemo) and registers the `Super+Shift+C` sh
 ```
 ./install.sh --install-deps      install python3-xlib with apt (asks for sudo)
 ./install.sh --no-keybinding     do not register the shortcut
+./install.sh --no-submenu        show the right-click entries as a flat list instead of one submenu
 ./install.sh --force             install even on a Wayland session
 ```
 
@@ -45,11 +46,15 @@ once the folder exists).
 
 | Action | How |
 |---|---|
-| Cascade this monitor | `Super+Shift+C`, or right-click the desktop and choose **Cascade Windows** |
-| Cascade all monitors of this workspace | desktop menu: **Cascade Workspace** |
-| Cascade every workspace | desktop menu: **Cascade All Workspaces** |
-| Undo | desktop menu: **Undo Cascade** |
-| Edit settings | desktop menu: **Cascade Settings** |
+| Cascade this monitor | `Super+Shift+C`, or right-click the desktop and choose **Cascade Windows > Monitor** |
+| Cascade all monitors of this workspace | desktop menu: **Cascade Windows > Workspace** |
+| Cascade every workspace | desktop menu: **Cascade Windows > All Workspaces** |
+| Undo | desktop menu: **Cascade Windows > Undo** |
+| Edit settings | desktop menu: **Cascade Windows > Settings...** |
+
+The entries are grouped into one submenu through Nemo's layout file `~/.config/nemo/actions-tree.json`. The
+installer only adds its own submenu to that file and keeps everything else in it. If the file cannot be
+changed safely (for example it is not valid JSON), the entries are shown as a flat list instead.
 
 Command line:
 

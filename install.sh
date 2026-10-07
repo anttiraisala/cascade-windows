@@ -10,6 +10,7 @@ Options:
   --install-deps     install python3-xlib with apt (asks for sudo)
   --no-keybinding    do not register the Super+Shift+C shortcut
   --no-nemo          do not install the desktop right-click menu entries
+  --no-submenu       show the right-click entries as a flat list instead of one submenu
   --force            install even on a Wayland session
   -h, --help         show this help
 USAGE
@@ -18,12 +19,14 @@ USAGE
 install_deps=0
 keybinding=1
 nemo=1
+submenu=1
 force=0
 for argument in "$@"; do
     case "$argument" in
         --install-deps) install_deps=1 ;;
         --no-keybinding) keybinding=0 ;;
         --no-nemo) nemo=0 ;;
+        --no-submenu) submenu=0 ;;
         --force) force=1 ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown option: $argument" >&2; usage >&2; exit 2 ;;
@@ -80,6 +83,11 @@ if [ "$nemo" -eq 1 ]; then
         sed "s|@COMMAND@|$command_path|g" "$template" > "$nemo_dir/$(basename "$template")"
     done
     echo "Installed the desktop right-click menu entries (Nemo actions) in $nemo_dir"
+    if [ "$submenu" -eq 1 ]; then
+        "$command_path" --install-nemo-menu || echo "The entries will be shown as a flat list instead." >&2
+    else
+        "$command_path" --remove-nemo-menu >/dev/null 2>&1 || true
+    fi
     echo "If they do not appear, restart the desktop file manager with: nemo --quit"
 fi
 
