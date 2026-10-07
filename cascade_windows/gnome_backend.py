@@ -22,6 +22,8 @@ log = logging.getLogger("cascade_windows")
 
 _SETTLE_DELAY = 0.15  # seconds the shell gets to apply moves before the result is checked
 _SETTLE_PASSES = 4  # how many times positions are corrected
+_UNMAXIMIZE_TIMEOUT = 1.5  # seconds to wait until restored windows report that they are not maximized
+_UNMAXIMIZE_POLL = 0.05
 
 
 class BusctlTransport:
@@ -94,6 +96,7 @@ class GnomeBackend(Backend):
         self._state: Optional[protocol.ShellState] = None
         self._queue: List[dict] = []
         self._pending: List[_Pending] = []
+        self._awaiting_unmaximize: set = set()
 
     # ------------------------------------------------------------------ state
 
@@ -141,9 +144,12 @@ class GnomeBackend(Backend):
 
     def unmaximize(self, window: WindowInfo) -> None:
         self._queue.append(protocol.op_unmaximize(window.id))
+        self._awaiting_unmaximize.add(window.id)
 
     def set_maximized(self, window: WindowInfo, maximized: bool) -> None:
         self._queue.append(protocol.op_maximize(window.id, maximized))
+        if not maximized:
+            self._awaiting_unmaximize.add(window.id)
 
     def place(self, window: WindowInfo, workspace: str, rect: Rect, anchor: str, resize: bool) -> None:
         if resize:
@@ -160,7 +166,19 @@ class GnomeBackend(Backend):
 
     def sync(self) -> None:
         self._flush()
+        self._wait_until_restored()
         time.sleep(self.settle_delay)
+
+    def _wait_until_restored(self) -> None:
+        """The shell refuses to move a maximized window, so wait until restored windows are restored."""
+        deadline = time.monotonic() + _UNMAXIMIZE_TIMEOUT
+        while self._awaiting_unmaximize:
+            maximized = {w.id for w in self._fresh().windows if w.maximized}
+            self._awaiting_unmaximize &= maximized
+            if not self._awaiting_unmaximize or time.monotonic() >= deadline:
+                break
+            time.sleep(_UNMAXIMIZE_POLL)
+        self._awaiting_unmaximize.clear()
 
     def commit(self) -> None:
         """Flush the requests, then fix windows that did not end up where the cascade wants them."""

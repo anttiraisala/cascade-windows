@@ -126,6 +126,22 @@ class CascadeOnFakeShellTest(unittest.TestCase):
         self.assertLess(operations.index("unmaximize"), operations.index("place"))
         self.assertEqual(transport.operations()[0], [{"op": "unmaximize", "id": 1}])
 
+    def test_slow_restore_of_a_maximized_window_is_waited_for(self):
+        backend, shell, _t = make_backend([shell_window(1, (0, 0, 1920, 1080), maximized=True), shell_window(2)])
+        shell.restore[1] = [100, 100, 400, 300]
+        shell.unmaximize_lag = 3
+        cascade(backend)
+        self.assertFalse(shell.windows[1]["maximized"])
+        self.assertEqual(rect_of(shell, 1), Rect(80, 40, 1660, 1020))
+        self.assertEqual(rect_of(shell, 2), Rect(80, 80, 1780, 980))
+
+    def test_a_window_that_stays_maximized_does_not_hang_the_command(self):
+        backend, shell, _t = make_backend([shell_window(1, (0, 0, 1920, 1080), maximized=True)])
+        shell.unmaximize_lag = 10 ** 6
+        with mock.patch("cascade_windows.gnome_backend._UNMAXIMIZE_TIMEOUT", 0.2):
+            with self.assertLogs("cascade_windows", level=logging.WARNING):
+                cascade(backend)
+
     def test_fixed_size_windows_and_dialogs_keep_their_size_and_get_the_top_right_corner(self):
         backend, shell, _t = make_backend([
             shell_window(1),

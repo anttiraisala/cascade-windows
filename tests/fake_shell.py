@@ -49,8 +49,15 @@ class FakeShell:
         self.pointer = list(pointer)
         self.shell_version = shell_version
         self.restore = {}
+        self.unmaximize_lag = 0  # GetState calls before a restore takes effect (like a slow client)
+        self._restoring = {}
 
     def get_state(self):
+        for window_id in list(self._restoring):
+            self._restoring[window_id] -= 1
+            if self._restoring[window_id] <= 0:
+                del self._restoring[window_id]
+                self._restore(self.windows[window_id], now=True)
         windows = []
         for window in self.windows.values():
             visible = {k: v for k, v in window.items() if not k.startswith("_")}
@@ -82,6 +89,9 @@ class FakeShell:
                 else:
                     self._restore(window)
             elif name == "place":
+                if window["maximized"]:
+                    errors.append("place of window %d failed: the window is still maximized" % window["id"])
+                    continue
                 self._place(window, operation["rect"], operation["resize"])
             elif name == "raise":
                 self.stack.remove(window["id"])
@@ -98,8 +108,11 @@ class FakeShell:
         monitor = self.monitors[0]
         window["rect"] = list(monitor["workarea"])
 
-    def _restore(self, window):
+    def _restore(self, window, now=False):
         if not window["maximized"]:
+            return
+        if self.unmaximize_lag and not now:
+            self._restoring.setdefault(window["id"], self.unmaximize_lag)
             return
         window["maximized"] = False
         window["rect"] = self.restore.pop(window["id"], window["rect"])

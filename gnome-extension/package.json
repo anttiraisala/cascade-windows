@@ -1,0 +1,6 @@
+{
+  "name": "cascade-windows-gnome-extension",
+  "private": true,
+  "type": "module",
+  "description": "Marks the extension sources as ES modules so the pure parts can be tested with Node."
+}

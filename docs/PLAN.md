@@ -32,7 +32,7 @@ cascade_windows/
   shell_protocol.py the JSON protocol between the core and the extension
   cli.py           command line entry point
 nemo/              desktop right-click menu entries (Nemo actions)
-gnome-extension/   GNOME Shell extension (planned; a thin window mover, see docs/GNOME.md)
+gnome-extension/   GNOME Shell extension (a thin window mover, see docs/GNOME.md)
 scripts, install.sh, uninstall.sh
 tests/
 ```
@@ -103,8 +103,8 @@ their sandboxes block window control.
 1. Core: settings, geometry, planning, undo, tests. (done)
 2. X11 backend, CLI, Nemo actions, shortcut, installer for Mint and Unity 7. (this milestone)
 3. Settings window.
-4. GNOME Shell extension for Ubuntu 24.04 on Wayland (design in `docs/GNOME.md`; the Python backend and
-   protocol exist, the extension is next), and a way to add the desktop right-click entries there.
+4. GNOME Shell extension for Ubuntu 24.04 on Wayland (design in `docs/GNOME.md`; the Python backend,
+   protocol and a first version of the extension exist and wait for testing in a real GNOME session), and a way to add the desktop right-click entries there.
 5. Ultrawide and portrait monitor support (below).
 6. `.deb` package.
 

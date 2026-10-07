@@ -1,0 +1,9 @@
+{
+  "uuid": "cascade-windows@anttiraisala.github.io",
+  "name": "Cascade Windows",
+  "description": "Arrange the windows of a monitor, a workspace or all workspaces in a Windows-style cascade. This extension only reports the state of the shell and moves windows; the layout is computed by the cascade-windows command.",
+  "shell-version": ["46", "47", "48", "49", "50"],
+  "settings-schema": "org.gnome.shell.extensions.cascade-windows",
+  "url": "https://github.com/anttiraisala/cascade-windows",
+  "version-name": "0.3.0"
+}

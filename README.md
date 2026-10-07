@@ -27,11 +27,14 @@ cd cascade-windows
 ./install.sh
 ```
 
-The installer works at user level (no root). It installs the command to `~/.local/bin/cascade-windows`,
+On GNOME (Ubuntu 24.04 and newer) the installer installs a GNOME Shell extension instead of the Nemo menu and
+shortcut; see `docs/GNOME.md` (under development, on the `gnome-extension` branch). The installer works at user level (no root). It installs the command to `~/.local/bin/cascade-windows`,
 adds the desktop right-click entries (Nemo) and registers the `Super+Shift+C` shortcut. Options:
 
 ```
-./install.sh --install-deps      install python3-xlib with apt (asks for sudo)
+./install.sh --backend gnome|x11   choose the version explicitly (default: GNOME desktops get the GNOME Shell
+                                 extension, everything else the X11 version)
+./install.sh --install-deps      install python3-xlib with apt (asks for sudo); only the X11 version needs it
 ./install.sh --no-keybinding     do not register the shortcut
 ./install.sh --no-submenu        show the right-click entries as a flat list instead of one submenu
 ./install.sh --reset-config      replace the configuration file with a fresh one holding all defaults
@@ -104,5 +107,6 @@ attach its output when reporting a problem.
 python3 -m unittest discover -s tests -v
 ```
 
-The core in `cascade_windows/` has no X11 dependency and is covered by unit tests. See `CLAUDE.md`
+This also runs the Node tests of the GNOME Shell extension (`node --test gnome-extension/tests/*.test.js`) when Node.js
+is installed. The core in `cascade_windows/` has no X11 dependency and is covered by unit tests. See `CLAUDE.md`
 and `docs/LANGUAGE_RULES.md` for the project conventions (everything in the repository is in English).

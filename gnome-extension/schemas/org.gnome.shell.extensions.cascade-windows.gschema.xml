@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.cascade-windows" path="/org/gnome/shell/extensions/cascade-windows/">
+    <key name="cascade-monitor" type="as">
+      <default><![CDATA[['<Super><Shift>c']]]></default>
+      <summary>Cascade the windows of the monitor under the pointer</summary>
+      <description>Keyboard shortcut for the Cascade Windows command.</description>
+    </key>
+    <key name="cascade-workspace" type="as">
+      <default>[]</default>
+      <summary>Cascade the windows of every monitor of this workspace</summary>
+      <description>Keyboard shortcut for the Cascade Workspace command. Not set by default.</description>
+    </key>
+    <key name="cascade-all" type="as">
+      <default>[]</default>
+      <summary>Cascade the windows of every workspace</summary>
+      <description>Keyboard shortcut for the Cascade All Workspaces command. Not set by default.</description>
+    </key>
+    <key name="undo-cascade" type="as">
+      <default>[]</default>
+      <summary>Undo the last cascade</summary>
+      <description>Keyboard shortcut for the Undo Cascade command. Not set by default.</description>
+    </key>
+  </schema>
+</schemalist>

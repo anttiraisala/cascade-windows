@@ -20,13 +20,17 @@ data_dir="${XDG_DATA_HOME:-$HOME/.local/share}"
 install_dir="$data_dir/cascade-windows"
 command_path="$HOME/.local/bin/cascade-windows"
 
+extension_uuid="cascade-windows@anttiraisala.github.io"
+
 if [ -x "$command_path" ]; then
+    "$command_path" --disable-gnome-extension >/dev/null 2>&1 || true
     "$command_path" --remove-keybinding >/dev/null 2>&1 || true
     "$command_path" --remove-nemo-menu >/dev/null 2>&1 || true
 fi
 rm -f "$command_path"
 rm -rf "$install_dir"
 rm -f "$data_dir"/nemo/actions/cascade-windows-*.nemo_action
+rm -rf "$data_dir/gnome-shell/extensions/$extension_uuid"
 
 if [ "$purge" -eq 1 ]; then
     rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/cascade-windows"

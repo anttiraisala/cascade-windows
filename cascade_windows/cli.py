@@ -11,7 +11,7 @@ import subprocess
 import sys
 from typing import List, Optional
 
-from . import __version__, keybinding, nemo_menu, undo
+from . import __version__, gnome_install, keybinding, nemo_menu, undo
 from .backend import Backend, BackendError
 from .cascade import (
     SCOPE_MONITOR,
@@ -57,6 +57,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--remove-keybinding", action="store_true", help="remove the keyboard shortcut")
     parser.add_argument("--install-nemo-menu", action="store_true", help="group the desktop right-click entries into a 'Cascade Windows' submenu")
     parser.add_argument("--remove-nemo-menu", action="store_true", help="remove the submenu and show the entries as a flat list again")
+    parser.add_argument("--enable-gnome-extension", action="store_true", help="turn the GNOME Shell extension on (the installer does this)")
+    parser.add_argument("--disable-gnome-extension", action="store_true", help="turn the GNOME Shell extension off")
     parser.add_argument("--backend", choices=BACKEND_CHOICES, default="auto",
                         help="window system access: x11, gnome (GNOME Shell extension) or auto (default)")
     parser.add_argument("--allow-wayland", action="store_true", help="run even on a Wayland session (only X11 windows can be moved)")
@@ -132,6 +134,12 @@ def _run(args: argparse.Namespace) -> int:
     if args.remove_nemo_menu:
         print(nemo_menu.remove())
         return 0
+    if args.enable_gnome_extension:
+        print(gnome_install.enable())
+        return 0
+    if args.disable_gnome_extension:
+        print(gnome_install.disable())
+        return 0
     if args.migrate_config:
         if remove_legacy_default_config(path):
             print("Removed the unmodified configuration file written by an earlier version: " + path)
@@ -192,7 +200,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     except (BackendError, SettingsError, keybinding.KeybindingError, nemo_menu.NemoMenuError) as problem:
         print("cascade-windows: %s" % problem, file=sys.stderr)
         if not (args.install_keybinding or args.remove_keybinding
-                or args.install_nemo_menu or args.remove_nemo_menu):
+                or args.install_nemo_menu or args.remove_nemo_menu
+                or args.enable_gnome_extension or args.disable_gnome_extension):
             _notify("Cascade Windows", str(problem))
         return 1
     except KeyboardInterrupt:

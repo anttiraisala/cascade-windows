@@ -28,8 +28,13 @@ Linux Mint and Unity 7 use.
 |---|---|---|
 | `cascade_windows/gnome_backend.py` | Python | `GnomeBackend`, the `Backend` implementation that talks to the extension. |
 | `cascade_windows/shell_protocol.py` | Python | Constants and (de)serialization of the protocol below. |
-| `gnome-extension/` | JavaScript | The GNOME Shell extension (target: GNOME 46, Ubuntu 24.04). |
-| `install.sh` | shell | Chooses the right parts for the desktop (see below). |
+| `cascade_windows/gnome_install.py` | Python | Turns the extension on and off (`enabled-extensions` in gsettings). |
+| `gnome-extension/` | JavaScript | The GNOME Shell extension. Priority target: GNOME Shell 46 (Ubuntu 24.04); written to also load on 47 to 50 (Ubuntu 26.04 has 50). |
+| `install.sh`, `uninstall.sh` | shell | Choose the right parts for the desktop (see below). |
+
+Files of the extension: `metadata.json`, `extension.js` (enables the service, the shortcuts and the panel menu),
+`lib/protocol.js` (pure logic, tested with Node), `lib/windows.js` (the only code that talks to Mutter),
+`lib/service.js` (D-Bus), `lib/panel.js` (panel menu), `schemas/` (shortcut settings).
 
 ## Choosing the backend
 
@@ -40,8 +45,13 @@ Linux Mint and Unity 7 use.
   Wayland session without the extension it stops with a message explaining how to enable the extension.
 - `auto` on any other desktop (Cinnamon, Unity 7, ...) uses the X11 backend exactly as before.
 
-The installer applies the same rule: on GNOME it installs the extension, elsewhere it installs the X11 version
-(Nemo actions and a gsettings shortcut). The Python core is installed in both cases.
+The installer applies the same rule (`./install.sh --backend auto|x11|gnome`): on GNOME it copies the extension to
+`~/.local/share/gnome-shell/extensions/cascade-windows@anttiraisala.github.io/`, compiles its settings schema and
+adds it to the enabled extensions; elsewhere it installs the X11 version (Nemo actions and a gsettings shortcut).
+The Python core is installed in both cases. The GNOME install does not need `python3-xlib`. The shortcut
+`Super+Shift+C` and the panel menu come from the extension itself, and the menu has the same entries in the same
+order as the Nemo submenu: Cascade Windows, Cascade Workspace, Cascade All Workspaces, Undo Cascade,
+Cascade Settings...
 
 ## The D-Bus protocol
 
@@ -100,7 +110,7 @@ example because the window no longer exists). A failed operation does not stop t
 
 | Operation | Meaning |
 |---|---|
-| `{"op": "unmaximize", "id": N}` | Restore a maximized window. The call waits (up to one second) until the window reports that it is no longer maximized. |
+| `{"op": "unmaximize", "id": N}` | Restore a maximized (or edge-tiled) window. The shell applies this asynchronously and refuses to move a window that is still maximized, so the caller reads `GetState` until the window reports `maximized: false` before it places the window. `GnomeBackend` does this. |
 | `{"op": "maximize", "id": N, "value": true}` | Maximize (`true`) or restore (`false`) a window. Used by undo. |
 | `{"op": "place", "id": N, "rect": [x, y, w, h], "resize": true}` | Make the visible frame of the window `rect`. When `resize` is false the size is not changed and only `x` and `y` are used. |
 | `{"op": "raise", "id": N}` | Raise the window to the top of the stacking order. |
@@ -112,11 +122,42 @@ character cells, windows with minimum sizes). This is the same approach as in th
 
 ## Testing
 
-- `tests/fake_shell.py` simulates a shell (windows, minimum sizes, size increments, asynchronous maximizing).
-  Backend tests run against it directly and, when `dbus-daemon`, `busctl` and a Python with PyGObject are
-  available, over a private session bus with a real D-Bus service, which also covers the transport.
-- The extension itself can only be tested in a real GNOME session. The maintainer tests it in a virtual machine
-  with Ubuntu 24.04. `docs/GNOME.md` is updated with the exact steps when the extension exists.
+Automatic (`python3 -m unittest discover -s tests`):
+
+- `tests/fake_shell.py` simulates a shell (windows, minimum sizes, size increments, slow restores). Backend tests
+  run against it directly and, when `dbus-daemon`, `busctl` and a Python with PyGObject are available, over a
+  private session bus with a real D-Bus service, which also covers the transport.
+- `gnome-extension/tests/` holds Node tests for the pure parts of the extension (`node --test`), run from the
+  Python suite when Node.js is installed. The installer is tested against a throw-away home with a fake gsettings.
+
+The parts that talk to GNOME Shell itself (`lib/windows.js`, `lib/service.js`, `lib/panel.js`, `extension.js`) can
+only be tested in a real GNOME session. Test them in a virtual machine:
+
+1. Get the code: `git clone https://github.com/anttiraisala/cascade-windows.git`, `cd cascade-windows`,
+   `git checkout gnome-extension`.
+2. `./install.sh` (it detects GNOME; use `./install.sh --backend gnome` to force it).
+3. Log out and in again. A Wayland shell only looks for new extensions when it starts.
+4. Check that it runs:
+   - `gnome-extensions info cascade-windows@anttiraisala.github.io` should say `State: ACTIVE`.
+   - `~/.local/bin/cascade-windows --backend gnome --diagnose` should list the monitors and windows.
+5. Open a few windows and press `Super+Shift+C`, or use the panel menu (the icon at the right end of the top bar).
+6. When something does not work, collect: the output of `gnome-shell --version`, of the `--diagnose` command above
+   and of `journalctl -b -o cat /usr/bin/gnome-shell | grep -i -E "cascade|error" | tail -50`. The `lg`
+   (Looking Glass, Alt+F2) Extensions tab also shows errors of a failed extension.
+7. `./uninstall.sh` removes everything (`--purge` also removes the configuration).
+
+## Unverified against a real shell
+
+The first version of the extension was written without access to a GNOME session. These are the places where a
+mistake is most likely, so look at them first when something fails:
+
+- `Gio.DBusExportedObject.wrapJSObject` returning `GLib.Variant('(s)', ...)` from the method handlers.
+- Maximizing and unmaximizing: `Meta.MaximizeFlags.BOTH` up to GNOME Shell 46, no arguments from 47
+  (`ShellWindows._setMaximized`), and reading the state through the `maximized_horizontally` and
+  `maximized_vertically` properties (`isMaximized`).
+- The `skip_taskbar` property and the stacking order of `global.get_window_actors()`.
+- Adding the shortcuts with `Main.wm.addKeybinding` from an `as` setting, and the panel button class.
+- Windows tiled to a screen edge count as maximized, so Undo restores them as fully maximized.
 
 ## Not in scope (yet)
 
