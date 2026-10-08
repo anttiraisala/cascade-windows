@@ -11,7 +11,7 @@ import subprocess
 import sys
 from typing import List, Optional
 
-from . import __version__, gnome_install, keybinding, nemo_menu, undo
+from . import __version__, environment, gnome_install, keybinding, nemo_menu, undo
 from .backend import Backend, BackendError
 from .cascade import (
     SCOPE_MONITOR,
@@ -52,6 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--migrate-config", action="store_true", help="remove an untouched configuration file written by an older version")
     parser.add_argument("--edit-config", action="store_true", help="open the configuration file in the default editor")
     parser.add_argument("--diagnose", action="store_true", help="print information about the environment and windows")
+    parser.add_argument("--environment-report", action="store_true", help="print which desktop, session type and tools were detected and what the installer would do (useful for bug reports)")
     parser.add_argument("--install-keybinding", metavar="COMMAND", help="register the keyboard shortcut for COMMAND")
     parser.add_argument("--binding", default=keybinding.DEFAULT_BINDING, help="shortcut used with --install-keybinding (default: %(default)s)")
     parser.add_argument("--remove-keybinding", action="store_true", help="remove the keyboard shortcut")
@@ -127,6 +128,10 @@ def _run(args: argparse.Namespace) -> int:
             print(path)
             return 0
         subprocess.Popen([opener, path])
+        return 0
+    if args.environment_report:
+        for line in environment.build_report():
+            print(line)
         return 0
     if args.install_nemo_menu:
         print(nemo_menu.install())

@@ -101,6 +101,7 @@ cascade-windows [--scope monitor|workspace|all] [--undo] [--dry-run]
 | `--migrate-config` | Remove an untouched configuration file written by an older version (the installer does this). |
 | `--diagnose` | Print the environment, monitors, work areas and windows. |
 | `--install-keybinding COMMAND`, `--binding KEYS`, `--remove-keybinding` | Register or remove the keyboard shortcut (default `<Super><Shift>c`). |
+| `--environment-report` | Print the detected desktop, session type, available tools and what the installer would do. Attach it to bug reports. |
 | `--install-nemo-menu`, `--remove-nemo-menu` | Group the desktop right-click entries into a submenu, or back into a flat list. |
 | `--backend auto\|x11\|gnome` | Window system access. `auto` (default) uses the GNOME Shell extension on GNOME desktops and X11 elsewhere. The GNOME extension is under development; see `docs/GNOME.md`. |
 | `--allow-wayland` | Run on a Wayland session (only X11 windows can be moved). |
