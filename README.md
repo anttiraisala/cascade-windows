@@ -76,8 +76,9 @@ Known limitations on Ubuntu Unity 7 (tested with Nemo 6.0.2 on Ubuntu 24.04):
 - The desktop menu shows the entries as a flat list, in the correct order, instead of one submenu, even
   after restarting the desktop with `pkill -9 nemo-desktop` (the session starts it again). Everything works the
   same; only the grouping is missing.
-- The `Super+Shift+C` shortcut is registered in gsettings, but Unity's Custom Shortcuts list does not show it
-  and the key does not trigger. Use the right-click menu or run `cascade-windows` from a terminal.
+- The shortcut is registered under `com.canonical.unity.settings-daemon` (where Unity keeps its own custom
+  shortcuts), not under the GNOME location, which Unity ignores. Run `./install.sh` or
+  `cascade-windows --install-keybinding "<command>"` again to move an older registration.
 
 Command line:
 

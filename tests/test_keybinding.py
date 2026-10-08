@@ -12,6 +12,11 @@ GNOME_SCHEMAS = [
     "org.gnome.settings-daemon.plugins.media-keys",
     "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding",
 ]
+UNITY_SCHEMAS = [
+    "com.canonical.unity.settings-daemon.plugins.media-keys",
+    "com.canonical.unity.settings-daemon.plugins.media-keys.custom-keybinding",
+]
+UNITY_PATH = "/com/canonical/unity/settings-daemon/plugins/media-keys/custom-keybindings/cascade-windows/"
 
 
 class FakeGsettings:
@@ -62,7 +67,29 @@ class KeybindingTest(unittest.TestCase):
         self.assertEqual(fake.values[(item, "binding")], "['<Super><Shift>c']")
         self.assertEqual(fake.values[(item, "name")], "Cascade Windows")
 
-    def test_unity_registers_a_path_and_a_binding_string(self):
+    def test_unity_prefers_the_canonical_schema(self):
+        fake = self.run_with("Unity:Unity7:ubuntu", UNITY_SCHEMAS + GNOME_SCHEMAS)
+        keybinding.install("/x/cascade-windows --scope monitor")
+        entries = fake.values[(UNITY_SCHEMAS[0], "custom-keybindings")]
+        self.assertIn(UNITY_PATH, entries)
+        item = UNITY_SCHEMAS[1] + ":" + UNITY_PATH
+        self.assertEqual(fake.values[(item, "binding")], "<Super><Shift>c")
+        self.assertEqual(fake.values[(item, "name")], "Cascade Windows")
+
+    def test_unity_install_moves_an_older_gnome_style_registration(self):
+        fake = self.run_with("Unity:Unity7:ubuntu", UNITY_SCHEMAS + GNOME_SCHEMAS)
+        old = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/cascade-windows/"
+        fake.values[(GNOME_SCHEMAS[0], "custom-keybindings")] = repr([old, "/other/"])
+        keybinding.install("cmd")
+        self.assertEqual(fake.values[(GNOME_SCHEMAS[0], "custom-keybindings")], repr(["/other/"]))
+
+    def test_unity_removal_clears_both_locations(self):
+        fake = self.run_with("Unity:Unity7:ubuntu", UNITY_SCHEMAS + GNOME_SCHEMAS)
+        keybinding.install("cmd")
+        keybinding.remove()
+        self.assertEqual(fake.values[(UNITY_SCHEMAS[0], "custom-keybindings")], "[]")
+
+    def test_unity_falls_back_to_the_gnome_schema(self):
         fake = self.run_with("Unity:Unity7:ubuntu", GNOME_SCHEMAS)
         keybinding.install("/x/cascade-windows --scope monitor")
         entries = fake.values[("org.gnome.settings-daemon.plugins.media-keys", "custom-keybindings")]
