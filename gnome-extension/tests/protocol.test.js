@@ -142,6 +142,15 @@ test('metadata lists the supported shell versions and a matching schema', () => 
     assert.match(schema, new RegExp(`id="${metadata['settings-schema'].replaceAll('.', '\\.')}"`));
 });
 
+test('the panel icon is a filled symbolic SVG that the shell can recolor', () => {
+    const svg = readFileSync(new URL('../icons/cascade-symbolic.svg', import.meta.url), 'utf8');
+    assert.match(svg, /viewBox="0 0 16 16"/);
+    assert.match(svg, /<path /);
+    assert.doesNotMatch(svg, /stroke/);
+    const extension = readFileSync(new URL('../extension.js', import.meta.url), 'utf8');
+    assert.match(extension, /cascade-symbolic\.svg/);
+});
+
 test('the panel menu has the entries in the requested order', async () => {
     const source = readFileSync(new URL('../lib/panel.js', import.meta.url), 'utf8');
     const labels = [...source.matchAll(/label: '([^']+)'/g)].map(m => m[1]);

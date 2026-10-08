@@ -112,7 +112,7 @@ class InstallerTest(unittest.TestCase):
         done = self.run_script("install.sh")
         self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
         for name in ("metadata.json", "extension.js", "lib/protocol.js", "lib/windows.js",
-                     "schemas/gschemas.compiled"):
+                     "icons/cascade-symbolic.svg", "schemas/gschemas.compiled"):
             self.assertTrue(os.path.exists(os.path.join(self.extension, name)), name)
         self.assertFalse(os.path.exists(os.path.join(self.extension, "tests")))
         self.assertEqual(self.enabled(), [UUID])

@@ -34,7 +34,8 @@ Linux Mint and Unity 7 use.
 
 Files of the extension: `metadata.json`, `extension.js` (enables the service, the shortcuts and the panel menu),
 `lib/protocol.js` (pure logic, tested with Node), `lib/windows.js` (the only code that talks to Mutter),
-`lib/service.js` (D-Bus), `lib/panel.js` (panel menu), `schemas/` (shortcut settings).
+`lib/service.js` (D-Bus), `lib/panel.js` (panel menu), `icons/` (the panel icon: two overlapping windows with title bars, drawn as filled
+shapes so that the shell can recolor it), `schemas/` (shortcut settings).
 
 ## Choosing the backend
 

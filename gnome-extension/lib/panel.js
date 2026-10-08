@@ -18,10 +18,14 @@ export const MENU_ENTRIES = [
 
 export const CascadeIndicator = GObject.registerClass(
 class CascadeIndicator extends PanelMenu.Button {
-    _init(run) {
+    /**
+     * @param {function(string[]): void} run starts the cascade-windows command with the given arguments
+     * @param {Gio.Icon} icon the top bar icon (a symbolic SVG, so that the shell can recolor it)
+     */
+    _init(run, icon) {
         super._init(0.0, 'Cascade Windows');
         this.add_child(new St.Icon({
-            icon_name: 'view-restore-symbolic',
+            gicon: icon,
             style_class: 'system-status-icon',
         }));
         for (const entry of MENU_ENTRIES) {

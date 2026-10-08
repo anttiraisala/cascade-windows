@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <!-- Two overlapping windows with title bars; hidden lines are left out. Filled shapes, so that the shell can recolor the icon. -->
+  <path fill="#bebebe" d="M1 1h10v1h-10zM1 10h5v1h-5zM1 1h1v10h-1zM10 1h1v5h-1zM1 3h10v1h-10zM5 5h10v1h-10zM5 14h10v1h-10zM5 5h1v10h-1zM14 5h1v10h-1zM5 7h10v1h-10z"/>
+</svg>

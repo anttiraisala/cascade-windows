@@ -109,7 +109,8 @@ if [ "$backend" = "gnome" ]; then
     rm -rf "$extension_dir"
     mkdir -p "$extension_dir"
     cp -r "$source_dir/gnome-extension/metadata.json" "$source_dir/gnome-extension/extension.js" \
-        "$source_dir/gnome-extension/lib" "$source_dir/gnome-extension/schemas" "$extension_dir/"
+        "$source_dir/gnome-extension/lib" "$source_dir/gnome-extension/schemas" \
+        "$source_dir/gnome-extension/icons" "$extension_dir/"
     if command -v glib-compile-schemas >/dev/null 2>&1; then
         glib-compile-schemas "$extension_dir/schemas"
     else

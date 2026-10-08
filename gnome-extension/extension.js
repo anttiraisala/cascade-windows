@@ -45,7 +45,8 @@ export default class CascadeWindowsExtension extends Extension {
                 Shell.ActionMode.NORMAL, () => this._run(args));
         }
 
-        this._indicator = new CascadeIndicator(args => this._run(args));
+        const icon = Gio.icon_new_for_string(GLib.build_filenamev([this.path, 'icons', 'cascade-symbolic.svg']));
+        this._indicator = new CascadeIndicator(args => this._run(args), icon);
         Main.panel.addToStatusArea(this.uuid, this._indicator);
     }
 
