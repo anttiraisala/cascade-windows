@@ -71,6 +71,14 @@ The entries are grouped into one submenu through Nemo's layout file `~/.config/n
 installer only adds its own submenu to that file and keeps everything else in it. If the file cannot be
 changed safely (for example it is not valid JSON), the entries are shown as a flat list instead.
 
+Known limitations on Ubuntu Unity 7 (tested with Nemo 6.0.2 on Ubuntu 24.04):
+
+- The desktop menu shows the entries as a flat list, in the correct order, instead of one submenu, even
+  after restarting the desktop with `pkill -9 nemo-desktop` (the session starts it again). Everything works the
+  same; only the grouping is missing.
+- The `Super+Shift+C` shortcut is registered in gsettings, but Unity's Custom Shortcuts list does not show it
+  and the key does not trigger. Use the right-click menu or run `cascade-windows` from a terminal.
+
 Command line:
 
 ```

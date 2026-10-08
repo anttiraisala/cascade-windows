@@ -133,6 +133,7 @@ if [ "$backend" = "x11" ] && [ "$nemo" -eq 1 ]; then
         "$command_path" --remove-nemo-menu >/dev/null 2>&1 || true
     fi
     echo "If they do not appear, restart the desktop file manager with: nemo --quit"
+    echo "(On Ubuntu Unity 7 the session restarts it only when it is killed: pkill -9 nemo-desktop)"
 fi
 
 if [ "$reset_config" -eq 1 ]; then
