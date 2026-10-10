@@ -124,6 +124,9 @@ class GnomeBackend(Backend):
     def workspaces(self) -> List[str]:
         return list(self._snapshot().workspaces)
 
+    def workspace_columns(self) -> int:
+        return self._snapshot().workspace_columns
+
     def windows(self) -> List[WindowInfo]:
         return list(self._snapshot().windows)
 

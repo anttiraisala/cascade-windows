@@ -9,6 +9,14 @@ from typing import List, Optional, Tuple
 
 BINDING_NAME = "cascade-windows"
 DEFAULT_BINDING = "<Super><Shift>c"
+FORCE_BINDING_NAME = "cascade-windows-force"
+FORCE_BINDING = "<Control><Super><Shift>c"
+
+# Shortcut id -> (name shown in the settings, default key combination)
+KEYBINDINGS = {
+    BINDING_NAME: ("Cascade Windows", DEFAULT_BINDING),
+    FORCE_BINDING_NAME: ("Cascade Windows (ignore exclusions)", FORCE_BINDING),
+}
 
 _CINNAMON_LIST_SCHEMA = "org.cinnamon.desktop.keybindings"
 _CINNAMON_ITEM_SCHEMA = "org.cinnamon.desktop.keybindings.custom-keybinding"
@@ -93,11 +101,11 @@ def _candidates(flavour: str) -> List[Tuple[str, str, str, str]]:
     return [gnome]
 
 
-def _entry(flavour: str, item_path: str) -> str:
+def _entry(flavour: str, item_path: str, name: str = BINDING_NAME) -> str:
     """What is stored in the list: an id for Cinnamon, a full path otherwise."""
     if flavour == "cinnamon":
-        return BINDING_NAME
-    return item_path % BINDING_NAME
+        return name
+    return item_path % name
 
 
 def _choose(flavour: str) -> Tuple[str, str, str, str]:
@@ -110,47 +118,54 @@ def _choose(flavour: str) -> Tuple[str, str, str, str]:
     return first
 
 
-def install(command: str, binding: str = DEFAULT_BINDING) -> str:
-    """Register the shortcut. Returns a short description of what was done."""
+def install(command: str, binding: Optional[str] = None, name: str = BINDING_NAME) -> str:
+    """Register the shortcut ``name`` (see KEYBINDINGS). Returns a short description of what was done."""
+    if name not in KEYBINDINGS:
+        raise KeybindingError("Unknown shortcut %r (use one of: %s)" % (name, ", ".join(KEYBINDINGS)))
+    label, default_binding = KEYBINDINGS[name]
+    binding = binding or default_binding
     flavour = detect_flavour()
     if flavour is None:
         raise KeybindingError("Unsupported desktop %r" % os.environ.get("XDG_CURRENT_DESKTOP"))
     list_schema, list_key, item_schema, item_path = _choose(flavour)
-    path = item_path % BINDING_NAME
+    path = item_path % name
     schema_with_path = "%s:%s" % (item_schema, path)
-    _gsettings("set", schema_with_path, "name", "Cascade Windows")
+    _gsettings("set", schema_with_path, "name", label)
     _gsettings("set", schema_with_path, "command", command)
     if flavour == "cinnamon":
         _gsettings("set", schema_with_path, "binding", repr([binding]))
     else:
         _gsettings("set", schema_with_path, "binding", binding)
-    entry = _entry(flavour, item_path)
+    entry = _entry(flavour, item_path, name)
     entries = _get_list(list_schema, list_key)
     if entry not in entries:
         entries.append(entry)
         _set_list(list_schema, list_key, entries)
     if flavour == "unity" and list_schema != _GNOME_LIST_SCHEMA:
-        _remove_from(_GNOME_LIST_SCHEMA, "custom-keybindings", _GNOME_ITEM_SCHEMA, _GNOME_ITEM_PATH, flavour)
+        _remove_from(_GNOME_LIST_SCHEMA, "custom-keybindings", _GNOME_ITEM_SCHEMA, _GNOME_ITEM_PATH, flavour, name)
     return "Registered %s for %r (%s)" % (binding, command, flavour)
 
 
-def _remove_from(list_schema: str, list_key: str, item_schema: str, item_path: str, flavour: str) -> None:
+def _remove_from(list_schema: str, list_key: str, item_schema: str, item_path: str, flavour: str,
+                 name: str = BINDING_NAME) -> None:
     """Remove our entry from one location, ignoring locations that do not exist on this system."""
     if not (_schema_exists(list_schema) and _schema_exists(item_schema)):
         return
-    entry = _entry(flavour, item_path)
+    entry = _entry(flavour, item_path, name)
     entries = _get_list(list_schema, list_key)
     if entry in entries:
         _set_list(list_schema, list_key, [e for e in entries if e != entry])
-    _gsettings("reset-recursively", "%s:%s" % (item_schema, item_path % BINDING_NAME))
+    _gsettings("reset-recursively", "%s:%s" % (item_schema, item_path % name))
 
 
 def remove() -> str:
+    """Remove all shortcuts this program registered."""
     flavour = detect_flavour()
     if flavour is None:
         raise KeybindingError("Unsupported desktop %r" % os.environ.get("XDG_CURRENT_DESKTOP"))
     candidates = _candidates(flavour)
     _require_schemas(*[c[0] for c in candidates if _schema_exists(c[0])] or [candidates[0][0]])
-    for list_schema, list_key, item_schema, item_path in candidates:
-        _remove_from(list_schema, list_key, item_schema, item_path, flavour)
-    return "Removed the shortcut"
+    for name in KEYBINDINGS:
+        for list_schema, list_key, item_schema, item_path in candidates:
+            _remove_from(list_schema, list_key, item_schema, item_path, flavour, name)
+    return "Removed the shortcuts"

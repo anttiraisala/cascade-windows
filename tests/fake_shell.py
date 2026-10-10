@@ -40,7 +40,7 @@ def shell_window(window_id, rect=(100, 100, 400, 300), **kwargs):
 
 class FakeShell:
     def __init__(self, monitors, windows, workspaces=("0",), current="0", pointer=(10, 10),
-                 shell_version="46.0"):
+                 shell_version="46.0", workspace_columns=0):
         self.monitors = monitors
         self.windows = {w["id"]: dict(w) for w in windows}
         self.stack = [w["id"] for w in sorted(windows, key=lambda w: w["stack_index"])]
@@ -48,6 +48,7 @@ class FakeShell:
         self.current = current
         self.pointer = list(pointer)
         self.shell_version = shell_version
+        self.workspace_columns = workspace_columns
         self.restore = {}
         self.unmaximize_lag = 0  # GetState calls before a restore takes effect (like a slow client)
         self._restoring = {}
@@ -68,6 +69,7 @@ class FakeShell:
             "shell_version": self.shell_version,
             "monitors": self.monitors,
             "workspaces": self.workspaces,
+            "workspace_columns": self.workspace_columns,
             "current_workspace": self.current,
             "pointer": self.pointer,
             "windows": windows,

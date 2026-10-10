@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Excluding monitors and workspaces: the `exclude` setting lists rules (`monitor` and/or `workspace`) for places the cascade leaves alone. Monitors are given by name or number, workspaces by number or by grid position `x,y`, numbered left to right and top to bottom from 0.
+- `--list-targets` prints the workspace numbers and positions and the monitor names and numbers; `--diagnose` includes the same and warns about rules that match nothing.
+- A short notification (and a message in the terminal) tells why nothing happened when the monitor is excluded; `notify.excluded` turns the notification off.
+- `--ignore-exclusions` and a second shortcut, `Ctrl+Super+Shift+C`, cascade the monitor under the pointer even if it is excluded. The installer registers both shortcuts (Cinnamon, Unity 7) and the GNOME extension provides both; `--keybinding-id` selects which one `--install-keybinding` registers and `--remove-keybinding` removes both.
+- GNOME protocol: the state optionally carries `workspace_columns`.
+
 ## 0.3.0
 
 - GNOME Shell support (Ubuntu 24.04 with GNOME Shell 46 and Ubuntu 26.04 with GNOME Shell 50, Wayland and X11 sessions) through a thin GNOME Shell extension. All layout logic stays in the shared Python core. See `docs/GNOME.md`.

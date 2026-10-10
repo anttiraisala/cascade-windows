@@ -22,6 +22,7 @@ const COMMAND_NAME = 'cascade-windows';
 // Shortcut setting name -> arguments of the command
 const SHORTCUTS = {
     'cascade-monitor': ['--scope', 'monitor'],
+    'cascade-monitor-force': ['--scope', 'monitor', '--ignore-exclusions'],
     'cascade-workspace': ['--scope', 'workspace'],
     'cascade-all': ['--scope', 'all'],
     'undo-cascade': ['--undo'],

@@ -28,14 +28,14 @@ cd cascade-windows
 ```
 
 On GNOME (Ubuntu 24.04 and newer) the installer installs a GNOME Shell extension instead of the Nemo menu and
-shortcut; see `docs/GNOME.md` (under development, on the `gnome-extension` branch). The installer works at user level (no root). It installs the command to `~/.local/bin/cascade-windows`,
-adds the desktop right-click entries (Nemo) and registers the `Super+Shift+C` shortcut. Options:
+shortcut; see `docs/GNOME.md`. The installer works at user level (no root). It installs the command to `~/.local/bin/cascade-windows`,
+adds the desktop right-click entries (Nemo) and registers the `Super+Shift+C` and `Ctrl+Super+Shift+C` shortcuts. Options:
 
 ```
 ./install.sh --backend gnome|x11   choose the version explicitly (default: GNOME desktops get the GNOME Shell
                                  extension, everything else the X11 version)
 ./install.sh --install-deps      install python3-xlib with apt (asks for sudo); only the X11 version needs it
-./install.sh --no-keybinding     do not register the shortcut
+./install.sh --no-keybinding     do not register the shortcuts
 ./install.sh --no-submenu        show the right-click entries as a flat list instead of one submenu
 ./install.sh --reset-config      replace the configuration file with a fresh one holding all defaults
                                  (the old file is kept as config.json.bak)
@@ -62,6 +62,7 @@ once the folder exists).
 | Action | How |
 |---|---|
 | Cascade this monitor | `Super+Shift+C`, or right-click the desktop and choose **Cascade Windows** |
+| Cascade this monitor even if it is excluded | `Ctrl+Super+Shift+C` (see "Excluding monitors and workspaces") |
 | Cascade all monitors of this workspace | desktop menu: **Cascade Workspace** |
 | Cascade every workspace | desktop menu: **Cascade All Workspaces** |
 | Undo | desktop menu: **Undo Cascade** |
@@ -80,12 +81,42 @@ Known limitations on Ubuntu Unity 7 (tested with Nemo 6.0.2 on Ubuntu 24.04):
   shortcuts), not under the GNOME location, which Unity ignores. Run `./install.sh` or
   `cascade-windows --install-keybinding "<command>"` again to move an older registration.
 
+## Excluding monitors and workspaces
+
+Some monitors or workspaces should never be cascaded (a TV, a monitor that shows a fixed layout). List them in
+the `exclude` setting of `~/.config/cascade-windows/config.json`; windows there are left where they are
+and the other monitors are cascaded as usual.
+
+```json
+"exclude": [
+  { "monitor": "HDMI-1" },
+  { "workspace": 3 },
+  { "workspace": "1,0", "monitor": [0, 2] }
+]
+```
+
+- `monitor` alone: that monitor on every workspace.
+- `workspace` alone: every monitor of that workspace.
+- Both: only that monitor on that workspace. A rule matches when all its keys match, and a monitor is left
+  alone when any rule matches. A value can be one item or a list.
+- A **monitor** is its name (not case sensitive) or its number, a **workspace** is its number or its grid
+  position `"x,y"`. Workspaces are numbered left to right and then top to bottom, starting from 0, so `0,0`
+  is the top-left workspace and, in a 2 x 2 grid, number 2 is the same as `0,1`.
+- `cascade-windows --list-targets` prints the numbers, positions and names to use (and warns about rules that
+  match nothing right now; a monitor may simply be unplugged).
+- When you start a cascade on an excluded monitor and nothing happens, a short notification explains why
+  (turn it off with `"notify": {"excluded": false}`).
+- `Ctrl+Super+Shift+C`, or `cascade-windows --ignore-exclusions`, cascades the monitor under the pointer even
+  if it is excluded.
+
+On GNOME the monitors are named `Monitor 0`, `Monitor 1`, ... (the number is the index); use the numbers there.
+
 Command line:
 
 ```
-cascade-windows [--scope monitor|workspace|all] [--undo] [--dry-run]
+cascade-windows [--scope monitor|workspace|all] [--undo] [--dry-run] [--ignore-exclusions]
                 [--config FILE] [--init-config] [--edit-config] [--reset-config] [--show-config]
-                [--diagnose] [--verbose]
+                [--diagnose] [--list-targets] [--environment-report] [--verbose]
 ```
 
 | Option | Meaning |
@@ -100,7 +131,9 @@ cascade-windows [--scope monitor|workspace|all] [--undo] [--dry-run]
 | `--show-config` | Print the configuration file path and the settings in effect. |
 | `--migrate-config` | Remove an untouched configuration file written by an older version (the installer does this). |
 | `--diagnose` | Print the environment, monitors, work areas and windows. |
-| `--install-keybinding COMMAND`, `--binding KEYS`, `--remove-keybinding` | Register or remove the keyboard shortcut (default `<Super><Shift>c`). |
+| `--ignore-exclusions` | Cascade monitors and workspaces that the `exclude` rules leave alone. |
+| `--list-targets` | List the workspace numbers and positions and the monitor numbers and names that `exclude` rules can use. |
+| `--install-keybinding COMMAND`, `--binding KEYS`, `--keybinding-id ID`, `--remove-keybinding` | Register or remove keyboard shortcuts. `--keybinding-id` is `cascade-windows` (default, `<Super><Shift>c`) or `cascade-windows-force` (`<Control><Super><Shift>c`, for the command with `--ignore-exclusions`). Removing takes both. |
 | `--environment-report` | Print the detected desktop, session type, available tools and what the installer would do. Attach it to bug reports. |
 | `--install-nemo-menu`, `--remove-nemo-menu` | Group the desktop right-click entries into a submenu, or back into a flat list. |
 | `--backend auto\|x11\|gnome` | Window system access. `auto` (default) uses the GNOME Shell extension on GNOME desktops and X11 elsewhere. The GNOME extension is under development; see `docs/GNOME.md`. |

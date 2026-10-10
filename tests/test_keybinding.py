@@ -101,6 +101,32 @@ class KeybindingTest(unittest.TestCase):
         )
         self.assertEqual(fake.values[(item, "binding")], "<Super><Shift>c")
 
+    def test_second_shortcut_ignoring_exclusions_is_registered_beside_the_first(self):
+        fake = self.run_with("X-Cinnamon", CINNAMON_SCHEMAS)
+        keybinding.install("cmd")
+        keybinding.install("cmd --ignore-exclusions", name=keybinding.FORCE_BINDING_NAME)
+        self.assertEqual(
+            fake.values[("org.cinnamon.desktop.keybindings", "custom-list")],
+            "['cascade-windows', 'cascade-windows-force']",
+        )
+        item = "org.cinnamon.desktop.keybindings.custom-keybinding:/org/cinnamon/desktop/keybindings/custom-keybindings/cascade-windows-force/"
+        self.assertEqual(fake.values[(item, "binding")], "['<Control><Super><Shift>c']")
+        self.assertEqual(fake.values[(item, "command")], "cmd --ignore-exclusions")
+        self.assertEqual(fake.values[(item, "name")], "Cascade Windows (ignore exclusions)")
+
+    def test_removal_takes_both_shortcuts(self):
+        fake = self.run_with("Unity:Unity7:ubuntu", UNITY_SCHEMAS + GNOME_SCHEMAS)
+        keybinding.install("cmd")
+        keybinding.install("cmd --ignore-exclusions", name=keybinding.FORCE_BINDING_NAME)
+        self.assertEqual(len(eval(fake.values[(UNITY_SCHEMAS[0], "custom-keybindings")])), 2)
+        keybinding.remove()
+        self.assertEqual(fake.values[(UNITY_SCHEMAS[0], "custom-keybindings")], "[]")
+
+    def test_unknown_shortcut_id_is_reported(self):
+        self.run_with("X-Cinnamon", CINNAMON_SCHEMAS)
+        with self.assertRaises(keybinding.KeybindingError):
+            keybinding.install("cmd", name="something-else")
+
     def test_installing_twice_does_not_duplicate_the_entry(self):
         fake = self.run_with("X-Cinnamon", CINNAMON_SCHEMAS)
         keybinding.install("cmd")

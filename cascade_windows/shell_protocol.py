@@ -33,6 +33,7 @@ class ShellState:
     pointer: Tuple[int, int]
     windows: List[WindowInfo]
     shell_version: str = ""
+    workspace_columns: int = 0  # 0: not reported, treat the workspaces as one row
 
 
 def _rect(value: Any, what: str) -> Rect:
@@ -99,6 +100,7 @@ def parse_state(text: str) -> ShellState:
             pointer=(int(pointer[0]), int(pointer[1])),
             windows=[_window(w) for w in data.get("windows", [])],
             shell_version=str(data.get("shell_version", "")),
+            workspace_columns=max(0, int(data.get("workspace_columns", 0) or 0)),
         )
     except (KeyError, TypeError, IndexError, ValueError) as problem:
         if isinstance(problem, ProtocolError):

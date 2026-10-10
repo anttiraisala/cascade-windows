@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from .backend import Backend
+from .exclusions import WorkspaceGrid, is_excluded
 from .geometry import ANCHOR_TOP_LEFT, ANCHOR_TOP_RIGHT, plan_layout, usable_area
 from .model import KIND_DIALOG, KIND_NORMAL, Monitor, Rect, WindowInfo
 from .regions import Region, regions_for_monitor
@@ -42,6 +43,8 @@ class GroupSummary:
 class Plan:
     moves: List[Move] = field(default_factory=list)  # back to front within each group
     groups: List[GroupSummary] = field(default_factory=list)
+    excluded_windows: int = 0  # eligible windows left alone because of the exclusion rules
+    target_excluded: bool = False  # the monitor of a "monitor" cascade is excluded itself
 
     def describe(self) -> List[str]:
         lines = []
@@ -54,6 +57,10 @@ class Plan:
             lines.append(
                 "  0x%x %r -> %s (%s)" % (move.window.id, move.window.title[:40], move.rect, move.anchor)
             )
+        if self.target_excluded:
+            lines.append("the monitor under the pointer is excluded in the configuration")
+        if self.excluded_windows:
+            lines.append("%d window(s) left alone because of the exclusion rules" % self.excluded_windows)
         return lines
 
 
@@ -109,6 +116,8 @@ def build_plan(
     pointer: Tuple[int, int],
     settings: Settings,
     scope: str,
+    workspace_columns: int = 0,
+    ignore_exclusions: bool = False,
 ) -> Plan:
     if scope not in SCOPES:
         raise ValueError("Unknown scope %r" % scope)
@@ -121,6 +130,11 @@ def build_plan(
         target_monitor = find_monitor(monitors, pointer[0], pointer[1])
 
     workspace_rank: Dict[str, int] = {key: i for i, key in enumerate(workspaces)}
+    grid = WorkspaceGrid.create(workspaces, workspace_columns)
+    rules = () if ignore_exclusions else settings.exclude
+    if target_monitor is not None and rules and is_excluded(rules, target_monitor, current_workspace, grid):
+        plan.target_excluded = True
+        return plan
     regions_by_monitor = {m.index: regions_for_monitor(m, settings) for m in monitors}
 
     groups: Dict[Tuple[int, int, int], List[WindowInfo]] = {}
@@ -133,6 +147,9 @@ def build_plan(
         cx, cy = window.rect.center
         monitor = find_monitor(monitors, cx, cy)
         if target_monitor is not None and monitor.index != target_monitor.index:
+            continue
+        if rules and is_excluded(rules, monitor, window.workspace, grid):
+            plan.excluded_windows += 1
             continue
         region = find_region(regions_by_monitor[monitor.index], cx, cy)
         key = (workspace_rank.get(window.workspace, len(workspace_rank)), monitor.index, region.index)
@@ -172,7 +189,7 @@ def apply_plan(backend: Backend, plan: Plan, settings: Settings) -> None:
     backend.commit()
 
 
-def plan_for_backend(backend: Backend, settings: Settings, scope: str) -> Plan:
+def plan_for_backend(backend: Backend, settings: Settings, scope: str, ignore_exclusions: bool = False) -> Plan:
     return build_plan(
         backend.monitors(),
         backend.windows(),
@@ -181,6 +198,8 @@ def plan_for_backend(backend: Backend, settings: Settings, scope: str) -> Plan:
         backend.pointer_position(),
         settings,
         scope,
+        backend.workspace_columns(),
+        ignore_exclusions,
     )
 
 

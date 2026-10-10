@@ -72,7 +72,23 @@ export function windowRecord(fields) {
     };
 }
 
-export function buildState({shellVersion, monitors, workspaceCount, currentWorkspace, pointer, windows}) {
+/**
+ * How many workspaces are in one row of the workspace grid.
+ *
+ * Mutter reports the layout as a number of columns and rows; either can be missing or -1 (meaning "as many
+ * as needed"). Returns 0 when nothing usable is known, which the command treats as one row.
+ */
+export function layoutColumns({count, columns, rows}) {
+    const wide = Number.isInteger(columns) && columns > 0 ? columns : 0;
+    const high = Number.isInteger(rows) && rows > 0 ? rows : 0;
+    if (wide > 0)
+        return wide;
+    if (high > 0 && count > 0)
+        return Math.ceil(count / high);
+    return 0;
+}
+
+export function buildState({shellVersion, monitors, workspaceCount, currentWorkspace, pointer, windows, workspaceColumns = 0}) {
     const workspaces = [];
     for (let i = 0; i < workspaceCount; i++)
         workspaces.push(String(i));
@@ -81,6 +97,7 @@ export function buildState({shellVersion, monitors, workspaceCount, currentWorks
         shell_version: String(shellVersion),
         monitors,
         workspaces,
+        workspace_columns: workspaceColumns,
         current_workspace: String(currentWorkspace),
         pointer: [pointer.x, pointer.y],
         windows,

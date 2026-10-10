@@ -6,6 +6,11 @@
       <summary>Cascade the windows of the monitor under the pointer</summary>
       <description>Keyboard shortcut for the Cascade Windows command.</description>
     </key>
+    <key name="cascade-monitor-force" type="as">
+      <default><![CDATA[['<Control><Super><Shift>c']]]></default>
+      <summary>Cascade the monitor under the pointer, ignoring the exclusion rules</summary>
+      <description>Keyboard shortcut for the Cascade Windows command that ignores the "exclude" rules of the configuration file.</description>
+    </key>
     <key name="cascade-workspace" type="as">
       <default>[]</default>
       <summary>Cascade the windows of every monitor of this workspace</summary>

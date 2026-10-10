@@ -7,6 +7,8 @@ import os
 from dataclasses import dataclass, fields
 from typing import Callable, Dict, Optional, Tuple
 
+from .exclusions import ExcludeRule, RuleError, parse_rules, rule_to_dict
+
 COMMENT_KEY = "comment"  # JSON has no comments, so explanations are ordinary keys that are ignored
 
 SIZE_MODES = ("anchored", "fit", "percent", "fixed")
@@ -41,6 +43,8 @@ class Settings:
     skip_dialogs: bool = False
     restore_maximized: bool = True
     workarea_dock_windows: bool = True
+    notify_excluded: bool = True
+    exclude: Tuple[ExcludeRule, ...] = ()
 
 
 # Configuration path -> (attribute, minimum, maximum)
@@ -68,7 +72,11 @@ _BOOL_KEYS: Dict[Tuple[str, ...], str] = {
     ("skip", "dialogs"): "skip_dialogs",
     ("restore_maximized",): "restore_maximized",
     ("workarea", "dock_windows"): "workarea_dock_windows",
+    ("notify", "excluded"): "notify_excluded",
 }
+
+# Configuration path -> attribute, for the list of exclusion rules
+_RULE_KEYS: Dict[Tuple[str, ...], str] = {("exclude",): "exclude"}
 
 _CHOICE_KEYS: Dict[Tuple[str, ...], Tuple[str, Tuple[str, ...]]] = {
     ("size_mode",): ("size_mode", SIZE_MODES),
@@ -98,7 +106,7 @@ def _dotted(path: Tuple[str, ...]) -> str:
 
 def _walk(data: dict, prefix: Tuple[str, ...], warn: Callable[[str], None]):
     """Yield (path, value) for every leaf, warning about unknown keys."""
-    known_leaves = set(_INT_KEYS) | set(_BOOL_KEYS) | set(_CHOICE_KEYS)
+    known_leaves = set(_INT_KEYS) | set(_BOOL_KEYS) | set(_CHOICE_KEYS) | set(_RULE_KEYS)
     known_prefixes = {path[:i] for path in known_leaves for i in range(1, len(path))}
     for key, value in data.items():
         path = prefix + (str(key),)
@@ -113,6 +121,10 @@ def _walk(data: dict, prefix: Tuple[str, ...], warn: Callable[[str], None]):
                 yield item
         else:
             warn("Ignoring unknown setting '%s'" % _dotted(path))
+
+
+def _is_comment_key(key: str) -> bool:
+    return key == COMMENT_KEY or key.startswith(COMMENT_KEY + "_")
 
 
 def settings_from_dict(data: dict, warn: Optional[Callable[[str], None]] = None) -> Settings:
@@ -136,6 +148,12 @@ def settings_from_dict(data: dict, warn: Optional[Callable[[str], None]] = None)
             if not isinstance(value, bool):
                 raise SettingsError("'%s' must be true or false" % _dotted(path))
             setattr(settings, _BOOL_KEYS[path], value)
+        elif path in _RULE_KEYS:
+            try:
+                rules = parse_rules(value, _is_comment_key)
+            except RuleError as problem:
+                raise SettingsError(str(problem))
+            setattr(settings, _RULE_KEYS[path], rules)
         else:
             attr, choices = _CHOICE_KEYS[path]
             if value not in choices:
@@ -156,6 +174,8 @@ def settings_to_dict(settings: Settings) -> dict:
         table[path] = attr
     for path, (attr, _choices) in _CHOICE_KEYS.items():
         table[path] = attr
+    for path, attr in _RULE_KEYS.items():
+        table[path] = attr
     # Keep a stable, readable order that matches docs/CONFIGURATION.md.
     order = [
         ("margin",),
@@ -169,6 +189,8 @@ def settings_to_dict(settings: Settings) -> dict:
         ("skip",),
         ("restore_maximized",),
         ("workarea",),
+        ("notify",),
+        ("exclude",),
     ]
     for head in order:
         for path, attr in table.items():
@@ -176,7 +198,10 @@ def settings_to_dict(settings: Settings) -> dict:
                 node = result
                 for part in path[:-1]:
                     node = node.setdefault(part, {})
-                node[path[-1]] = getattr(settings, attr)
+                value = getattr(settings, attr)
+                if path in _RULE_KEYS:
+                    value = [rule_to_dict(rule) for rule in value]
+                node[path[-1]] = value
     return result
 
 
@@ -222,6 +247,10 @@ _COMMENTS = {
         "panel) are treated as obstacles, using their position and size. Set it to false if windows "
         "end up too far from the edges because of an overlay that is wrongly taken for a panel."
     ),
+    ("notify",): (
+        "excluded=true: show a short desktop notification when nothing was cascaded because the monitor "
+        "or workspace is excluded (see 'exclude'). The message is also printed in the terminal."
+    ),
 }
 
 _COMMENT_AFTER = {
@@ -237,6 +266,17 @@ _COMMENT_AFTER = {
     ("restore_maximized",): (
         "true: a maximized window is restored to its normal size and then cascaded like the others. "
         "false: maximized windows are left alone."
+    ),
+    ("exclude",): (
+        "Monitors and workspaces that the cascade leaves alone: windows there are not moved. A list of "
+        "rules, each with 'monitor' and/or 'workspace'; a value can be one item or a list. A monitor is "
+        "its name or its number, for example \"HDMI-1\" or 1. A workspace is its number or its position "
+        "\"x,y\", numbered left to right and then top to bottom from 0 (\"0,0\" is the top-left "
+        "workspace). 'monitor' alone: that monitor on every workspace. 'workspace' alone: every monitor "
+        "of that workspace. Both: only that monitor on that workspace. Examples: "
+        "{\"monitor\": \"HDMI-1\"}, {\"workspace\": 3}, {\"workspace\": \"1,0\", \"monitor\": [0, 2]}. "
+        "Run 'cascade-windows --list-targets' to see the names and numbers. "
+        "Run 'cascade-windows --ignore-exclusions' (or press Ctrl+Super+Shift+C) to cascade anyway."
     ),
     ("order",): (
         "Which window goes to the back. 'stacking': keep the current front-to-back order. "
@@ -304,6 +344,8 @@ def remove_legacy_default_config(path: Optional[str] = None) -> bool:
         return False
     data = _strip_comments(data)
     data.setdefault("workarea", {"dock_windows": True})  # files from before this section existed
+    data.setdefault("notify", {"excluded": True})  # files from before exclusions existed
+    data.setdefault("exclude", [])
     if isinstance(data.get("skip"), dict) and data["skip"].get("dialogs") is False:
         del data["skip"]["dialogs"]  # files from before this setting existed
     if data not in _legacy_default_dicts():
@@ -364,5 +406,6 @@ def write_default_config(path: Optional[str] = None, overwrite: bool = False) ->
 assert {f.name for f in fields(Settings)} == (
     {attr for attr, _l, _h in _INT_KEYS.values()}
     | set(_BOOL_KEYS.values())
+    | set(_RULE_KEYS.values())
     | {attr for attr, _c in _CHOICE_KEYS.values()}
 ), "every Settings field must be reachable from the configuration file"

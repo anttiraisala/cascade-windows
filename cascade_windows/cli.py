@@ -11,7 +11,7 @@ import subprocess
 import sys
 from typing import List, Optional
 
-from . import __version__, environment, gnome_install, keybinding, nemo_menu, undo
+from . import __version__, environment, exclusions, gnome_install, keybinding, nemo_menu, undo
 from .backend import Backend, BackendError
 from .cascade import (
     SCOPE_MONITOR,
@@ -54,8 +54,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--diagnose", action="store_true", help="print information about the environment and windows")
     parser.add_argument("--environment-report", action="store_true", help="print which desktop, session type and tools were detected and what the installer would do (useful for bug reports)")
     parser.add_argument("--install-keybinding", metavar="COMMAND", help="register the keyboard shortcut for COMMAND")
-    parser.add_argument("--binding", default=keybinding.DEFAULT_BINDING, help="shortcut used with --install-keybinding (default: %(default)s)")
-    parser.add_argument("--remove-keybinding", action="store_true", help="remove the keyboard shortcut")
+    parser.add_argument("--binding", default=None, help="key combination used with --install-keybinding (default: the default of the chosen shortcut)")
+    parser.add_argument("--keybinding-id", choices=sorted(keybinding.KEYBINDINGS), default=keybinding.BINDING_NAME,
+                        help="which shortcut --install-keybinding registers: %s (default: %%(default)s)" % ", ".join(
+                            "%s = %s, default %s" % (key, label, default) for key, (label, default) in sorted(keybinding.KEYBINDINGS.items())))
+    parser.add_argument("--remove-keybinding", action="store_true", help="remove the keyboard shortcuts")
+    parser.add_argument("--ignore-exclusions", action="store_true", help="cascade monitors and workspaces that the 'exclude' rules of the configuration leave alone")
+    parser.add_argument("--list-targets", action="store_true", help="list the workspace numbers and positions and the monitor numbers and names that 'exclude' rules can use")
     parser.add_argument("--install-nemo-menu", action="store_true", help="group the desktop right-click entries into a 'Cascade Windows' submenu")
     parser.add_argument("--remove-nemo-menu", action="store_true", help="remove the submenu and show the entries as a flat list again")
     parser.add_argument("--enable-gnome-extension", action="store_true", help="turn the GNOME Shell extension on (the installer does this)")
@@ -68,14 +73,35 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _notify(title: str, message: str) -> None:
+def _notify(title: str, message: str, icon: str = "dialog-error") -> None:
     """Show a desktop notification when not started from a terminal (best effort)."""
     if sys.stderr.isatty() or shutil.which("notify-send") is None:
         return
     try:
-        subprocess.run(["notify-send", "-i", "dialog-error", title, message], check=False)
+        subprocess.run(["notify-send", "-i", icon, title, message], check=False)
     except OSError:
         pass
+
+
+def exclusion_message(plan) -> Optional[str]:
+    """Why nothing was cascaded when the exclusion rules are the reason, else None."""
+    hint = " Use --ignore-exclusions (Ctrl+Super+Shift+C) to cascade anyway."
+    if plan.target_excluded:
+        return "This monitor is excluded from the cascade in the configuration." + hint
+    if plan.excluded_windows and not plan.moves:
+        return "Nothing was cascaded: the windows are on monitors or workspaces excluded in the configuration." + hint
+    return None
+
+
+def target_lines(backend: Backend, settings=None) -> List[str]:
+    """The numbers and names usable in 'exclude' rules, with warnings about rules that match nothing."""
+    monitors = backend.monitors()
+    grid = exclusions.WorkspaceGrid.create(backend.workspaces(), backend.workspace_columns())
+    lines = exclusions.describe_targets(monitors, grid, backend.current_workspace())
+    if settings is not None:
+        for message in exclusions.unmatched_references(settings.exclude, monitors, grid):
+            lines.append("warning: " + message)
+    return lines
 
 
 def desktop_is_gnome(environ=None) -> bool:
@@ -155,7 +181,7 @@ def _run(args: argparse.Namespace) -> int:
         print(json.dumps(settings_to_dict(settings), indent=2))
         return 0
     if args.install_keybinding:
-        print(keybinding.install(args.install_keybinding, args.binding))
+        print(keybinding.install(args.install_keybinding, args.binding, args.keybinding_id))
         return 0
     if args.remove_keybinding:
         print(keybinding.remove())
@@ -169,6 +195,13 @@ def _run(args: argparse.Namespace) -> int:
         print("configuration: %s%s" % (path, "" if os.path.exists(path) else " (not found, using defaults)"))
         for line in backend.diagnose():
             print(line)
+        for line in target_lines(backend, settings):
+            print(line)
+        return 0
+
+    if args.list_targets:
+        for line in target_lines(backend, settings):
+            print(line)
         return 0
 
     if args.undo:
@@ -180,17 +213,23 @@ def _run(args: argparse.Namespace) -> int:
         print("Restored %d window(s)." % restored)
         return 0
 
-    plan = plan_for_backend(backend, settings, args.scope)
+    plan = plan_for_backend(backend, settings, args.scope, args.ignore_exclusions)
     if args.dry_run:
         for line in plan.describe() or ["No windows to cascade."]:
             print(line)
         return 0
     if not plan.moves:
-        print("No windows to cascade.")
+        message = exclusion_message(plan)
+        print(message or "No windows to cascade.")
+        if message and settings.notify_excluded:
+            _notify("Cascade Windows", message, "dialog-information")
         return 0
     undo.save_entries(undo.entries_from_plan(plan))
     apply_plan(backend, plan, settings)
-    print("Cascaded %d window(s)." % len(plan.moves))
+    left_alone = ""
+    if plan.excluded_windows:
+        left_alone = "; %d window(s) left alone because of the exclusion rules" % plan.excluded_windows
+    print("Cascaded %d window(s)%s." % (len(plan.moves), left_alone))
     return 0
 
 

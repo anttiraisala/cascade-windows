@@ -27,7 +27,9 @@ Unknown keys are ignored with a warning. Invalid values make the command stop wi
   "wrap": { "enabled": true, "offset": 12 },
   "skip": { "minimized": true, "fullscreen": true, "sticky": true, "dialogs": false },
   "restore_maximized": true,
-  "workarea": { "dock_windows": true }
+  "workarea": { "dock_windows": true },
+  "notify": { "excluded": true },
+  "exclude": []
 }
 ```
 
@@ -48,6 +50,44 @@ Unknown keys are ignored with a warning. Invalid values make the command stop wi
 | `skip.dialogs` | Do not touch dialog windows. When `false` (the default) dialogs are cascaded too: they keep their own size and their top-right corner goes to the top-right corner of their cascade position. |
 | `workarea.dock_windows` | Treat panels and launchers that do not reserve screen space in the standard way (for example the Unity 7 launcher and top panel) as obstacles, using their position and size. Turn off if an overlay is wrongly taken for a panel. |
 | `restore_maximized` | Restore maximized windows to normal size before cascading. When `false` they are left alone. |
+| `exclude` | A list of rules for monitors and workspaces that are never cascaded. See below. Empty by default. |
+| `notify.excluded` | Show a short desktop notification when a cascade did nothing because the monitor or workspace is excluded. The message is always printed in the terminal too. |
+
+## Excluding monitors and workspaces
+
+`exclude` is a list of rules. Each rule is an object with `monitor` and/or `workspace`; a value is one item or a
+list of items.
+
+```json
+"exclude": [
+  { "monitor": "HDMI-1" },
+  { "workspace": 3 },
+  { "workspace": "1,0", "monitor": [0, 2] }
+]
+```
+
+| Rule | Excludes |
+|---|---|
+| `{"monitor": X}` | monitor X on every workspace |
+| `{"workspace": W}` | every monitor of workspace W |
+| `{"workspace": W, "monitor": X}` | only monitor X on workspace W |
+
+All keys of a rule must match for the rule to apply; a monitor on a workspace is left alone when any rule applies.
+Windows there are not moved, and they do not count as windows to cascade. Other monitors are cascaded normally.
+An empty rule, an unknown key or a wrong kind of value stops the command with a message that names the rule
+(for example `exclude[1]`). A comment key (`comment`, `comment_...`) is allowed in a rule.
+
+- A **monitor** is its name, compared without regard to case (for example `"HDMI-1"` on X11), or its number
+  (index) as `cascade-windows --list-targets` prints it. On GNOME the names are `Monitor 0`, `Monitor 1`, ...
+- A **workspace** is its number or its grid position `"x,y"` (a string). Workspaces are numbered in reading
+  order, left to right and then top to bottom, starting from 0; `"0,0"` is the top-left workspace. In a 2 x 2
+  grid the numbers are 0 and 1 on the first row and 2 and 3 on the second (`"0,1"` is number 2). A single row
+  of workspaces has positions `"0,0"`, `"1,0"`, `"2,0"`, ... A single column has `"0,0"`, `"0,1"`, ...
+- A rule that matches nothing right now (an unplugged monitor, a workspace that does not exist) is ignored;
+  `--list-targets` and `--diagnose` warn about it.
+
+`cascade-windows --ignore-exclusions` (shortcut `Ctrl+Super+Shift+C`) cascades the monitor under the pointer
+even if it is excluded.
 
 Windows of other special types (docks, panels, desktop widgets, splash screens) are never moved.
 

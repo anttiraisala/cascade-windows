@@ -271,6 +271,21 @@ class X11Backend(Backend):
                     keys.append(self._key(desktop, col, row))
         return keys
 
+    def workspace_columns(self) -> int:
+        """Columns of the workspace grid: the viewport columns on Compiz, else the EWMH desktop layout."""
+        if self.uses_viewports:
+            return self.columns
+        layout = self._cardinals(self.root, "_NET_DESKTOP_LAYOUT")
+        if len(layout) < 3:
+            return 0
+        orientation, columns, rows = layout[:3]
+        if orientation == 0:  # desktops fill the rows from left to right
+            if columns > 0:
+                return columns
+            return int(math.ceil(self.desktop_count / float(rows))) if rows > 0 else 0
+        # Vertical numbering is only understood for a single column of desktops.
+        return 1 if columns == 1 or rows >= self.desktop_count else 0
+
     # ------------------------------------------------------------------ monitors
 
     def _monitor_rects(self) -> List[Tuple[str, Rect]]:

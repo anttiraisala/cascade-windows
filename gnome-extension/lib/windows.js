@@ -98,14 +98,29 @@ export class ShellWindows {
         });
 
         const [x, y] = this._global.get_pointer();
+        const workspaceCount = workspaceManager.get_n_workspaces();
         return P.buildState({
             shellVersion: this._version,
             monitors,
-            workspaceCount: workspaceManager.get_n_workspaces(),
+            workspaceCount,
+            workspaceColumns: this._workspaceColumns(workspaceManager, workspaceCount),
             currentWorkspace: current,
             pointer: {x, y},
             windows,
         });
+    }
+
+    /** Columns of the workspace grid as Mutter reports them (0 when unknown). */
+    _workspaceColumns(workspaceManager, count) {
+        try {
+            return P.layoutColumns({
+                count,
+                columns: workspaceManager.layout_columns,
+                rows: workspaceManager.layout_rows,
+            });
+        } catch (error) {
+            return 0;
+        }
     }
 
     /** The object runOperations() uses to carry out operations on real windows. */

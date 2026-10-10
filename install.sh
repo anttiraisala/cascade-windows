@@ -10,7 +10,7 @@ Options:
   --backend NAME     x11, gnome or auto (default): auto installs the GNOME Shell extension on GNOME
                      desktops and the X11 version (Nemo menu, shortcut) everywhere else
   --install-deps     install python3-xlib with apt (asks for sudo); only needed for the X11 version
-  --no-keybinding    do not register the Super+Shift+C shortcut
+  --no-keybinding    do not register the Super+Shift+C and Ctrl+Super+Shift+C shortcuts
   --no-nemo          do not install the desktop right-click menu entries
   --no-submenu       show the right-click entries as a flat list instead of one submenu
   --reset-config     replace the configuration file with a fresh one holding all defaults
@@ -146,7 +146,10 @@ echo "          Run 'cascade-windows --edit-config' to create and edit it, 'casc
 
 if [ "$backend" = "x11" ] && [ "$keybinding" -eq 1 ]; then
     if "$command_path" --install-keybinding "$command_path --scope monitor" 2>/dev/null; then
-        :
+        # Ctrl+Super+Shift+C: the same cascade, ignoring the "exclude" rules of the configuration
+        "$command_path" --install-keybinding "$command_path --scope monitor --ignore-exclusions" \
+            --keybinding-id cascade-windows-force >/dev/null 2>&1 \
+            || echo "Could not register the Ctrl+Super+Shift+C shortcut (cascade ignoring the exclusions)." >&2
     else
         echo "Could not register the keyboard shortcut automatically." >&2
         echo "Add one yourself in the keyboard settings with the command:" >&2
@@ -160,7 +163,7 @@ case ":$PATH:" in
 esac
 
 if [ "$backend" = "gnome" ]; then
-    echo "The extension provides the Super+Shift+C shortcut and a panel menu."
+    echo "The extension provides the Super+Shift+C and Ctrl+Super+Shift+C shortcuts and a panel menu."
     echo "Log out and in again so that GNOME Shell loads the extension (needed on Wayland)."
     echo "After that, try: $command_path --backend gnome --diagnose"
 else

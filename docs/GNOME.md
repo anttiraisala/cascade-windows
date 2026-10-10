@@ -50,7 +50,7 @@ The installer applies the same rule (`./install.sh --backend auto|x11|gnome`): o
 `~/.local/share/gnome-shell/extensions/cascade-windows@anttiraisala.github.io/`, compiles its settings schema and
 adds it to the enabled extensions; elsewhere it installs the X11 version (Nemo actions and a gsettings shortcut).
 The Python core is installed in both cases. The GNOME install does not need `python3-xlib`. The shortcut
-`Super+Shift+C` and the panel menu come from the extension itself, and the menu has the same entries in the same
+`Super+Shift+C`, `Ctrl+Super+Shift+C` (cascade ignoring the `exclude` rules) and the panel menu come from the extension itself, and the menu has the same entries in the same
 order as the Nemo submenu: Cascade Windows, Cascade Workspace, Cascade All Workspaces, Undo Cascade,
 Cascade Settings...
 
@@ -79,6 +79,7 @@ Returns a JSON object:
     {"index": 0, "name": "Virtual-1", "rect": [0, 0, 1920, 1080], "workarea": [0, 27, 1920, 1053]}
   ],
   "workspaces": ["0", "1"],
+  "workspace_columns": 2,
   "current_workspace": "0",
   "pointer": [960, 540],
   "windows": [
@@ -97,6 +98,9 @@ Returns a JSON object:
   (`Meta.Window.get_frame_rect()`), not the buffer with its shadows. A monitor `workarea` is the monitor minus
   panels and docks (`Workspace.get_work_area_for_monitor()`).
 - Workspace keys are the workspace indexes as strings. A sticky window reports the current workspace.
+- `workspace_columns` (optional, 0 or missing when unknown) is the number of workspaces in one row of the
+  workspace grid, from Mutter's layout; the command uses it to give workspaces an `x,y` position for the
+  `exclude` rules (see `docs/CONFIGURATION.md`). Unknown means one row.
 - `kind` is `normal` for normal windows, `dialog` for dialog and modal dialog windows and for windows that are
   transient for another window, and `other` for everything else (docks, desktop, menus, splash screens, ...).
   Only windows of the kinds `normal` and `dialog` need to be listed, but listing others is harmless.
@@ -158,6 +162,7 @@ mistake is most likely, so look at them first when something fails:
   `maximized_vertically` properties (`isMaximized`).
 - The `skip_taskbar` property and the stacking order of `global.get_window_actors()`.
 - Adding the shortcuts with `Main.wm.addKeybinding` from an `as` setting, and the panel button class.
+- `workspaceManager.layout_columns` and `layout_rows` (reported as `workspace_columns`) and the second shortcut `cascade-monitor-force` (`Ctrl+Super+Shift+C`, cascades ignoring the exclusion rules). GNOME monitor names are `Monitor N`; the connector names (HDMI-1) are not read.
 - Windows tiled to a screen edge count as maximized, so Undo restores them as fully maximized.
 
 ## Not in scope (yet)

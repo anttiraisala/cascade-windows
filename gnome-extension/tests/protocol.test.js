@@ -158,3 +158,21 @@ test('the panel menu has the entries in the requested order', async () => {
         'Cascade Windows', 'Cascade Workspace', 'Cascade All Workspaces', 'Undo Cascade', 'Cascade Settings...',
     ]);
 });
+
+test('workspace grid columns from the layout Mutter reports', () => {
+    assert.equal(P.layoutColumns({count: 4, columns: 2, rows: 2}), 2);
+    assert.equal(P.layoutColumns({count: 4, columns: 4, rows: 1}), 4);
+    assert.equal(P.layoutColumns({count: 4, columns: -1, rows: 1}), 4);
+    assert.equal(P.layoutColumns({count: 5, columns: -1, rows: 2}), 3);
+    assert.equal(P.layoutColumns({count: 4, columns: 1, rows: -1}), 1);
+    assert.equal(P.layoutColumns({count: 4, columns: -1, rows: -1}), 0);
+    assert.equal(P.layoutColumns({count: 4}), 0);
+});
+
+test('the state carries the workspace columns', () => {
+    const state = P.buildState({
+        shellVersion: '46.0', monitors: [], workspaceCount: 3, currentWorkspace: 0,
+        pointer: {x: 0, y: 0}, windows: [], workspaceColumns: 3,
+    });
+    assert.equal(state.workspace_columns, 3);
+});

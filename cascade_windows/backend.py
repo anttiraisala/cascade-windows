@@ -34,6 +34,10 @@ class Backend:
         """All workspace keys, in their natural order."""
         raise NotImplementedError
 
+    def workspace_columns(self) -> int:
+        """How many workspaces are in one row of the workspace grid; 0 when unknown (one row)."""
+        return 0
+
     def windows(self) -> List[WindowInfo]:
         raise NotImplementedError
 
